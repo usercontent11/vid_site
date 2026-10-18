@@ -75,6 +75,23 @@ class ResolverTests(unittest.TestCase):
         self.assertIn("video", report["media_elements"][0]["tag"])
 
 
+    def test_appcontext_javascript_report_exposes_property_names_only(self):
+        from resolver import inspect_page_structure
+
+        page = """<script id="appcontext-script">
+        window.appContext = { playerConfig: { media: { manifestUrl: "https://secret.example/master?token=SECRET" } },
+        videoId: 12, controls: true };
+        </script>"""
+        report = inspect_page_structure(page, "https://mobilexh.live/videos/test/")
+        script = next(s for s in report["scripts"] if s["id"] == "appcontext-script")
+        shape = script["javascript_structure"]
+        self.assertIn("manifestUrl", shape["property_names"])
+        self.assertIn("playerConfig", shape["player_related_property_names"])
+        self.assertFalse(shape["values_returned"])
+        self.assertNotIn("SECRET", repr(shape))
+        self.assertNotIn("secret.example", repr(shape))
+
+
     @patch("resolver.http_session")
     def test_source_fetch_uses_shared_cookie_session(self, shared_session):
         class FakeResponse:
