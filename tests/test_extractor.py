@@ -28,6 +28,21 @@ class ExtractorTests(unittest.TestCase):
         self.assertEqual(row["access_status"], "unknown")
         self.assertIsNone(normalize_card({**card, "isPremium": True}))
 
+    def test_category_page_context_accepts_matching_slug_even_if_internal_type_differs(self):
+        from extractor import validate_category_context
+        data = {"currentPage": "categoryPage"}
+        category = {"category_name": "Amateur", "category_slug": "amateur", "category_path": "/categories/amateur"}
+        channel = {"tagType": "tag", "slug": "amateur", "inurl": "amateur"}
+        validate_category_context(data, category, "/categories/amateur", channel, [{"id": 1}])
+
+    def test_category_page_context_reports_mismatched_slug(self):
+        from extractor import SourceFormatError, validate_category_context
+        data = {"currentPage": "categoryPage"}
+        category = {"category_name": "Algerian", "category_slug": "algerian", "category_path": "/categories/algerian"}
+        channel = {"tagType": "category", "slug": "amateur", "inurl": "amateur"}
+        with self.assertRaisesRegex(SourceFormatError, "Requested category slug"):
+            validate_category_context(data, category, "/categories/algerian", channel, [{"id": 1}])
+
     def test_default_age_cookie(self):
         session = requests.Session()
         apply_cookie_secret(session)

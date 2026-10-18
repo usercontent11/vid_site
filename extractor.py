@@ -198,12 +198,67 @@ def fetch_page(category,page):
     if not final.path.startswith("/categories/"): raise SourceFormatError(f"Unexpected redirect to {final.path!r}.")
     data=parse_initials(response.text)
     channel=data.get("channelInfo")
-    if not isinstance(channel,dict) or channel.get("tagType")!="category": raise SourceFormatError("Response isn't a category page.")
-    reported=data.get("activePage",data.get("page"))
-    if reported is not None and int(reported)!=page: raise SourceFormatError(f"Requested page {page}; rendered page {reported}.")
     cards=((data.get("pagesCategoryComponent") or {}).get("trendingVideoListProps") or {}).get("videoThumbProps")
-    if not isinstance(cards,list): raise SourceFormatError("videoThumbProps is missing or not a list.")
+    validate_category_context(data, category, final.path, channel, cards)
+    reported=data.get("activePage",data.get("page"))
+    if reported is not None:
+        try:
+            reported=int(reported)
+        except (TypeError,ValueError) as exc:
+            raise SourceFormatError(f"Invalid page indicator {reported!r} for requested page {page}.") from exc
+        if reported!=page:
+            raise SourceFormatError(f"Requested page {page}, but source rendered page {reported}.")
     return cards
+
+def validate_category_context(data, category, final_path, channel, cards):
+    """Validate category identity using both URL and page metadata.
+
+    Some category routes are represented internally as tag listings. Accept that
+    only when the page explicitly identifies the same slug and contains card data.
+    Include diagnostic fields when the server serves a different page/challenge.
+    """
+    if not isinstance(channel,dict):
+        raise SourceFormatError(
+            f"Expected category data for {category['category_slug']!r}, but channelInfo is "
+            f"{type(channel).__name__}; pageType={data.get('currentPage')!r}, "
+            f"final_path={final_path!r}, top_keys={list(data)[:12]!r}. "
+            "The site may have returned an age-verification, anti-bot, or fallback page."
+        )
+    if not isinstance(cards,list):
+        raise SourceFormatError(
+            f"Expected videoThumbProps list for {category['category_slug']!r}; "
+            f"found {type(cards).__name__}. channelInfo keys={list(channel)[:12]!r}, "
+            f"tagType={channel.get('tagType')!r}, slug={channel.get('slug')!r}, "
+            f"inurl={channel.get('inurl')!r}, pageType={data.get('currentPage')!r}."
+        )
+
+    expected_slug = slugify(urlsplit(category["category_path"]).path.rstrip("/").split("/")[-1])
+    page_slug_raw = channel.get("slug") or channel.get("inurl")
+    page_slug = slugify(str(page_slug_raw)) if page_slug_raw else ""
+    tag_type = str(channel.get("tagType") or "").strip().lower()
+
+    if page_slug and page_slug != expected_slug:
+        raise SourceFormatError(
+            f"Requested category slug={expected_slug!r}, but source page identifies "
+            f"slug={page_slug!r} (tagType={tag_type!r}, inurl={channel.get('inurl')!r}, "
+            f"final_path={final_path!r}, pageType={data.get('currentPage')!r}). "
+            "Add the canonical source path to category_paths.json if this category uses a different slug."
+        )
+
+    if tag_type != "category":
+        if page_slug != expected_slug:
+            raise SourceFormatError(
+                f"Not a verified category listing: requested={expected_slug!r}, "
+                f"tagType={tag_type!r}, page_slug={page_slug!r}, "
+                f"final_path={final_path!r}, pageType={data.get('currentPage')!r}."
+            )
+        # The listing is tied to the requested slug and contains the expected card list.
+        # Some categories may have a different internal tagType despite using /categories/.
+        LOG.warning(
+            "Accepting listing for %s with internal tagType=%r because page slug matches and "
+            "videoThumbProps is a list.",
+            category["category_name"], tag_type
+        )
 
 def path_only(value):
     return urlsplit(value.strip()).path or None if isinstance(value,str) and value.strip() else None
