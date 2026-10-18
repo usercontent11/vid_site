@@ -1,2 +1,8 @@
 # Runtime-only debug scripts and metadata from description extraction
 diagnostic/
+
+# Node tooling used only to deploy Neon Functions
+node_modules/
+.env
+.env.*
+!.env.example
