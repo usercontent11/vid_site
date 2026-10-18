@@ -13,6 +13,10 @@ on:
       - scripts/**
       - .github/workflows/test-flask-site.yml
       - .github/workflows/inspect-source-video-page.yml
+      - .github/workflows/probe-neon-source-page.yml
+      - neon.ts
+      - neon-functions/**
+      - package.json
   pull_request:
     paths:
       - app.py
@@ -24,6 +28,10 @@ on:
       - static/**
       - tests/**
       - requirements.txt
+      - neon.ts
+      - neon-functions/**
+      - package.json
+      - .github/workflows/probe-neon-source-page.yml
   workflow_dispatch:
 
 permissions:
@@ -41,6 +49,17 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install Node tooling
+        run: npm install --no-audit --no-fund
+      - name: Compile Neon Function and config
+        run: |
+          npx esbuild neon-functions/source-page-inspect.ts --platform=node --target=node24 --format=esm --outfile=/tmp/source-page-inspect.mjs
+          npx esbuild neon.ts --platform=node --target=node24 --format=esm --external:@neon/config/v1 --outfile=/tmp/neon-config.mjs
+          node tests/test_neon_inspector.mjs /tmp/source-page-inspect.mjs
       - name: Compile application
         run: python -m py_compile app.py resolver.py tests/test_resolver.py
       - name: Run resolver tests
