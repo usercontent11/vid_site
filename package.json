@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@neon/config": "latest"
+    "@neon/config": "latest",
+    "esbuild": "latest"
   }
 }
