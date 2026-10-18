@@ -18,8 +18,6 @@ ASSET_BASE_URL = os.getenv("ASSET_BASE_URL", "https://ic-vt-nss.cdnsolutions.med
 SITE_NAME = os.getenv("SITE_NAME", "Video Library").strip() or "Video Library"
 try: PER_PAGE = min(60, max(1, int(os.getenv("PER_PAGE", "30"))))
 except ValueError: PER_PAGE = 30
-try: STREAM_TTL = min(3600, max(60, int(os.getenv("STREAM_CACHE_TTL_SECONDS", "600"))))
-except ValueError: STREAM_TTL = 600
 NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 ET.register_namespace("", NS)
 SITEMAP_CHUNK = 20000
@@ -89,7 +87,8 @@ def headers(response):
 def decorate_video(row):
     v = dict(row)
     v["thumbnail_url"] = asset_url(v.get("thumbnail_path")) or asset_url(v.get("image_path")) or asset_url(v.get("preview_thumb_path"))
-    v["href"] = internal_path(v.get("page_path"))
+    safe_href = internal_path(v.get("page_path"))
+    v["href"] = safe_href.rstrip("/") + "/" if safe_href else None
     v["duration_label"] = duration(v.get("duration_seconds"))
     return v
 
@@ -107,7 +106,7 @@ def cats(limit=12):
         """, (limit,)).fetchall()
     out=[]
     for row in rows:
-        item=dict(row); item["href"]=internal_path(item.get("category_path"))
+        item=dict(row); href=internal_path(item.get("category_path")); item["href"]=href.rstrip("/")+"/" if href else None
         out.append(item)
     return out
 
@@ -295,33 +294,20 @@ def embed(video_id):
 
 @app.get("/api/stream/<int:video_id>")
 def stream_api(video_id):
-    """Resolve on the server; Neon stores only a short-lived URL cache."""
+    """Resolve a manifest on demand. No M3U8 URL is persisted or cached."""
     with db() as conn:
-        conn.execute("""CREATE TABLE IF NOT EXISTS video_stream_cache(
-          video_id BIGINT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
-          stream_url TEXT NOT NULL,resolved_at TIMESTAMPTZ NOT NULL DEFAULT now(),expires_at TIMESTAMPTZ NOT NULL)""")
-        v=conn.execute("SELECT id,page_path,access_status FROM videos WHERE id=%s",(video_id,)).fetchone()
-        if not v or v.get("access_status") in {"premium","inaccessible"}:
-            return jsonify({"error":"Video is not available for playback."}),404
-        cached=conn.execute("SELECT stream_url FROM video_stream_cache WHERE video_id=%s AND expires_at>now()",(video_id,)).fetchone()
-        if cached:return jsonify({"url":cached["stream_url"],"expiresIn":STREAM_TTL})
-        try:
-            manifest=resolve_stream_url(v["page_path"],SOURCE_BASE_URL,
-              os.getenv("STREAM_ALLOWED_HOSTS","cdnsolutions.media").split(","))
-        except StreamResolutionError as exc:
-            log.warning("Stream resolution failed for video %s: %s",video_id,exc)
-            return jsonify({"error":"A playable stream was not found for this video."}),503
-        conn.execute("""INSERT INTO video_stream_cache(video_id,stream_url,resolved_at,expires_at)
-          VALUES(%s,%s,now(),now()+(%s*interval '1 second'))
-          ON CONFLICT(video_id) DO UPDATE SET stream_url=EXCLUDED.stream_url,resolved_at=now(),expires_at=EXCLUDED.expires_at""",
-          (video_id,manifest,STREAM_TTL))
-    return jsonify({"url":manifest,"expiresIn":STREAM_TTL})
-
-def xloc(parent,tag,value):
-    child=ET.SubElement(parent,f"{{{NS}}}{tag}");child.text=value;return child
-
-def xmlout(root):
-    return ET.tostring(root,encoding="utf-8",xml_declaration=True),200,{"Content-Type":"application/xml; charset=utf-8"}
+        video = conn.execute(
+            "SELECT id, page_path, access_status FROM videos WHERE id = %s",
+            (video_id,),
+        ).fetchone()
+    if not video or video.get("access_status") in {"premium", "inaccessible"}:
+        return jsonify({"error": "Video is not available for playback."}), 404
+    try:
+        manifest = resolve_stream_url(video["page_path"], SOURCE_BASE_URL)
+    except StreamResolutionError as exc:
+        log.warning("Stream resolution failed for video id=%s: %s", video_id, exc)
+        return jsonify({"error": "A playable stream was not found for this video."}), 503
+    return jsonify({"url": manifest})
 
 @app.get("/sitemap.xml")
 def sitemap_index():

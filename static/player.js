@@ -1,8 +1,30 @@
 (function(){
 "use strict";
-function hlsLib(){if(window.Hls)return Promise.resolve(window.Hls);if(window.__hlsPromise)return window.__hlsPromise;window.__hlsPromise=new Promise(function(ok,no){var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js";s.async=true;s.onload=function(){ok(window.Hls)};s.onerror=function(){no(new Error("HLS playback library failed to load."))};document.head.appendChild(s)});return window.__hlsPromise}
-function mount(root){var video=root.querySelector("video"),button=root.querySelector("[data-load-player]"),status=root.querySelector("[data-player-status]"),overlay=root.querySelector(".player-overlay");if(!video||!button||!status)return;var ready=false;function msg(t){status.textContent=t}function showOverlay(){if(overlay)overlay.classList.remove("is-hidden")}
-async function init(){if(ready){video.play().catch(function(){});return}ready=true;button.disabled=true;button.textContent="Loading…";msg("Resolving a playable stream…");try{var r=await fetch(root.getAttribute("data-stream-endpoint"),{headers:{"Accept":"application/json"},credentials:"same-origin"});var data=await r.json().catch(function(){return{}});if(!r.ok||!data.url)throw new Error(data.error||"This video is not currently playable.");if(video.canPlayType("application/vnd.apple.mpegurl")){video.src=data.url;video.load();msg("Stream ready. Press play to start watching.")}else{var Hls=await hlsLib();if(!Hls||!Hls.isSupported())throw new Error("This browser does not support HLS playback.");var h=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:30,maxBufferLength:30});h.loadSource(data.url);h.attachMedia(video);h.on(Hls.Events.MANIFEST_PARSED,function(){msg("Stream ready. Press play to start watching.")});h.on(Hls.Events.ERROR,function(_,e){if(e&&e.fatal){msg("The stream failed to load. It may be unavailable or blocked by the media host.");h.destroy();ready=false;button.disabled=false;button.textContent="Try again";button.classList.remove("is-hidden");showOverlay()}})}button.textContent="Ready";button.classList.add("is-hidden");if(overlay)overlay.classList.add("is-hidden");video.addEventListener("error",function(){msg("Playback failed. The stream may have expired or the media host may block cross-origin playback.");ready=false;button.disabled=false;button.textContent="Try again";button.classList.remove("is-hidden");showOverlay()},{once:true})}catch(e){ready=false;button.disabled=false;button.textContent="Try again";showOverlay();msg(e&&e.message?e.message:"Playback could not be initialized.")}}
-button.addEventListener("click",init)}
-document.querySelectorAll("[data-video-player]").forEach(mount)
+function loadHls(){if(window.Hls)return Promise.resolve(window.Hls);if(window.__hlsPromise)return window.__hlsPromise;window.__hlsPromise=new Promise(function(resolve,reject){var script=document.createElement("script");script.src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js";script.async=true;script.onload=function(){resolve(window.Hls)};script.onerror=function(){reject(new Error("HLS playback library could not be loaded."))};document.head.appendChild(script)});return window.__hlsPromise}
+function mount(root){var video=root.querySelector("video"),button=root.querySelector("[data-load-player]"),status=root.querySelector("[data-player-status]"),overlay=root.querySelector(".player-overlay");if(!video||!status)return;var started=false,hls=null;
+function message(text){status.textContent=text}
+function overlayOn(){if(overlay)overlay.classList.remove("is-hidden")}
+function overlayOff(){if(overlay)overlay.classList.add("is-hidden")}
+function retryVisible(visible){if(!button)return;button.classList.toggle("is-hidden",!visible);button.disabled=false;button.textContent="Try again"}
+async function initialize(){if(started)return;started=true;retryVisible(false);overlayOn();message("Finding the stream…");
+try{
+ var response=await fetch(root.getAttribute("data-stream-endpoint"),{headers:{"Accept":"application/json"},credentials:"same-origin"});
+ var result=await response.json().catch(function(){return{}});
+ if(!response.ok||!result.url)throw new Error(result.error||"This video is not currently playable.");
+ if(video.canPlayType("application/vnd.apple.mpegurl")){
+   video.src=result.url;video.preload="metadata";video.load();message("Stream found. Press play to watch.");overlayOff();
+ }else{
+   var Hls=await loadHls();
+   if(!Hls||!Hls.isSupported())throw new Error("This browser does not support HLS playback.");
+   hls=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:30,maxBufferLength:30});
+   hls.on(Hls.Events.MANIFEST_PARSED,function(){message("Stream ready. Press play to watch.");overlayOff()});
+   hls.on(Hls.Events.ERROR,function(_event,data){if(data&&data.fatal){if(hls)hls.destroy();hls=null;started=false;message("The stream could not be loaded. It may be unavailable or the media host may block playback.");overlayOn();retryVisible(true)}});
+   hls.loadSource(result.url);hls.attachMedia(video);message("Loading video manifest…");
+ }
+}catch(error){started=false;message(error&&error.message?error.message:"Playback could not be initialized.");overlayOn();retryVisible(true)}
+}
+if(button)button.addEventListener("click",initialize);
+initialize();
+}
+document.querySelectorAll("[data-video-player]").forEach(mount);
 })();

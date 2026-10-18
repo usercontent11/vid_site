@@ -41,10 +41,16 @@ def validate_manifest(value, page_url, hosts):
         ip=ipaddress.ip_address(host)
         if not ip.is_global:return None
     except ValueError:pass
-    if not allowed(host,hosts) or not parsed.path.lower().endswith(".m3u8"):return None
+    if not parsed.path.lower().endswith(".m3u8"):return None
     return parsed.geturl()
 
 def extract_m3u8_url(page_html, page_url, allowed_hosts=None):
+    """Extract a public HTTPS M3U8 found in the configured source page.
+
+    allowed_hosts is retained as a backwards-compatible argument but not required:
+    stream CDN hostnames can vary. Only the configured source page is fetched server-side;
+    the returned media URL is validated and handed to the browser.
+    """
     if not isinstance(page_html,str) or not page_html:raise StreamResolutionError("The source page was empty.")
     source=(urlsplit(page_url).hostname or "").lower()
     hosts=set(allowed_hosts or {source,"cdnsolutions.media"})
