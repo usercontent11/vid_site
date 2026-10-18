@@ -10,11 +10,16 @@ on:
       - static/**
       - tests/**
       - requirements.txt
+      - scripts/**
       - .github/workflows/test-flask-site.yml
+      - .github/workflows/inspect-source-video-page.yml
   pull_request:
     paths:
       - app.py
       - resolver.py
+      - extractor.py
+      - scripts/**
+      - .github/workflows/inspect-source-video-page.yml
       - templates/**
       - static/**
       - tests/**
