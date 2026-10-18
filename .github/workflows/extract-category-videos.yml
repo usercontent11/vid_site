@@ -1,0 +1,67 @@
+name: Extract category video metadata
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: Maximum pages per category (1-2000).
+        required: true
+        type: number
+        default: 40
+      workers:
+        description: Concurrent category workers (1-16).
+        required: true
+        type: number
+        default: 4
+      retry_failed:
+        description: Requeue categories that exhausted retries.
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SITE_BASE_URL: ${{ vars.SITE_BASE_URL || secrets.SITE_BASE_URL || 'https://mobilexh.live' }}
+      SOURCE_COOKIE: ${{ secrets.SOURCE_COOKIE }}
+      MAX_PAGES: ${{ inputs.max_pages }}
+      WORKERS: ${{ inputs.workers }}
+      RETRY_FAILED: ${{ inputs.retry_failed }}
+      PAGE_DELAY_SECONDS: '0.25'
+      REQUEST_TIMEOUT_SECONDS: '30'
+      LEASE_MINUTES: '15'
+      MAX_CATEGORY_ATTEMPTS: '5'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+      - name: Validate configuration
+        shell: bash
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::Add DATABASE_URL in repository Actions secrets."; exit 1; }
+          test -n "$SITE_BASE_URL" || { echo "::error::Set SITE_BASE_URL in Actions variables or secrets."; exit 1; }
+          python - <<'PY'
+          import os
+          pages, workers = int(os.environ['MAX_PAGES']), int(os.environ['WORKERS'])
+          if not 1 <= pages <= 2000: raise SystemExit('MAX_PAGES must be 1..2000')
+          if not 1 <= workers <= 16: raise SystemExit('WORKERS must be 1..16')
+          PY
+      - name: Run syntax checks and tests
+        run: |
+          python -m compileall -q extractor.py
+          python -m unittest discover -s tests -v
+      - name: Extract metadata
+        run: python extractor.py
