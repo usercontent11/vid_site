@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-from resolver import (StreamResolutionError, extract_m3u8_url, extract_download_file_url,\n                      resolve_stream_source, source_page_url, _read_source_page)
+from resolver import (StreamResolutionError, extract_m3u8_url, extract_download_file_url,
+                      resolve_stream_source, source_page_url, _read_source_page)
 
 
 class ResolverTests(unittest.TestCase):

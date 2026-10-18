@@ -185,7 +185,7 @@ def extract_m3u8_url(page_html: str, page_url: str) -> str:
 def extract_download_file_url(page_html: str, page_url: str) -> str | None:
     """Read videoModel.downloadFile only as a constrained same-site file fallback."""
     script_match = re.search(
-        r'<script\\b[^>]*\\bid=["\\']initials-script["\\'][^>]*>(.*?)</script\\s*>',
+        r'<script\b[^>]*\bid=["\']initials-script["\'][^>]*>(.*?)</script\s*>',
         page_html,
         re.I | re.S,
     )
@@ -193,7 +193,7 @@ def extract_download_file_url(page_html: str, page_url: str) -> str | None:
         return None
     try:
         raw = re.sub(
-            r"^\\s*window\\.initials\\s*=\\s*",
+            r"^\s*window\.initials\s*=\s*",
             "",
             script_match.group(1).strip(),
             count=1,
