@@ -80,6 +80,8 @@ class ExtractorTests(unittest.TestCase):
         values = {c.name: c.value for c in session.cookies}
         self.assertIn("g_state", values)
         self.assertIn('"i_b":"example-test-value"', values["g_state"])
+        self.assertEqual(values["parental-control"], "yes")
+        self.assertEqual(values["x_content_preference_index"], "straight")
 
 
 if __name__ == "__main__":
