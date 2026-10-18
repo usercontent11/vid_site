@@ -8,6 +8,16 @@ This workflow extracts category cards into Neon/PostgreSQL. It creates/migrates 
 - `SITE_BASE_URL` is optional as a repository variable or secret; the default is `https://mobilexh.live`.
 - The request session loads the supplied age/preference cookies by default. The `g_state` value is not embedded in public source. `SOURCE_COOKIE` may contain a Netscape cookie export, a conventional Cookie header, or the raw JSON value of the `g_state` cookie (with `i_l`, `i_ll`, `i_b`, `i_e`, and `i_et` fields). A raw `g_state` JSON value is added alongside the default preference cookies; a complete Netscape export or Cookie header replaces the defaults. Cookie values are not logged.
 
+## Source page structure capture
+
+Open Actions → **Inspect source video page** → Run workflow. The default path is /videos/xhfKO6H; change `page_path` to another stored /videos/... path to inspect a different page. The workflow uses `SITE_BASE_URL` (default https://mobilexh.live) and the optional `SOURCE_COOKIE` Actions secret.
+
+On success, the workflow saves and commits two files under `diagnostics/`:
+- `source-page-response.html`: a readable copy of the response with all URL query values and credential/session-like values redacted.
+- `source-page-structure.json`: script IDs and sizes, link/media element summaries, JSON key paths, and inline app-context property names, without returning embedded values.
+
+This is a sanitized snapshot, not the byte-for-byte raw response. The purpose is to inspect markup and script structure without committing signed URLs, tokens, or cookie values to this public repository. The workflow needs repository contents: write permission to commit the files. Each run overwrites the previous snapshot, so inspect or save a copy before running it for another page.
+
 ## Category extraction run
 
 Open Actions → Extract category video metadata → Run workflow.
