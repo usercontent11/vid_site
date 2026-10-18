@@ -156,5 +156,21 @@ class ResolverTests(unittest.TestCase):
         )
 
 
+    def test_no_manifest_error_reports_model_state_without_stream_urls(self):
+        page = '''<title>xHamster</title><script id="initials-script">window.initials = {
+          "avPlaceholderComponent":{"title":"To watch this video, you must<br>verify your age and be logged in"},
+          "downloadDropdownComponent":{"sources":{"mp4":{"144p":"https://media.example/secret.mp4?token=secret"}}}
+        };</script>'''
+        with self.assertRaises(StreamResolutionError) as raised:
+            extract_m3u8_url(page, "https://mobilexh.live/videos/example/")
+        message = str(raised.exception)
+        self.assertIn("videoModel_present=False", message)
+        self.assertIn("videoModel_type=missing", message)
+        self.assertIn("age_verification_prompt=True", message)
+        self.assertIn("source_type_keys=['mp4']", message)
+        self.assertNotIn("secret.mp4", message)
+        self.assertNotIn("token=secret", message)
+
+
 if __name__ == "__main__":
     unittest.main()

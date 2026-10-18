@@ -148,36 +148,71 @@ def extract_m3u8_url(page_html: str, page_url: str) -> str:
     if candidates:
         raise StreamResolutionError("An M3U8 link was found but was not a valid public HTTPS manifest.")
 
-    # Log page structure only; never raw HTML, cookies, stream URLs, or tokens.
+    # Log structure only: never raw HTML, URLs, cookies, or tokens.
     title_match = re.search(r"<title[^>]*>(.*?)</title\s*>", page_html, re.I | re.S)
     page_title = (
         re.sub(r"\s+", " ", html.unescape(title_match.group(1))).strip()[:100]
         if title_match else "missing"
     )
+    html_chars = len(page_html)
     script_match = re.search(
         r'<script\b[^>]*\bid=["\']initials-script["\'][^>]*>(.*?)</script\s*>',
         page_html,
         re.I | re.S,
     )
-    model_info = "initials_script=missing"
+    initial_keys = []
+    initial_data = None
+    parse_state = "missing"
     if script_match:
-        model_info = "initials_script=present"
+        parse_state = "unparseable"
         try:
-            raw = re.sub(r"^\s*window\.initials\s*=\s*", "", script_match.group(1).strip(), count=1).strip()
+            raw = re.sub(
+                r"^\s*window\.initials\s*=\s*",
+                "",
+                script_match.group(1).strip(),
+                count=1,
+            ).strip()
             if raw.endswith(";"):
                 raw = raw[:-1]
-            initial_data = json.loads(raw)
-            if isinstance(initial_data, dict):
-                top_keys = sorted(str(k) for k in initial_data.keys())[:30]
-                model = initial_data.get("videoModel")
-                model_keys = sorted(str(k) for k in model.keys())[:30] if isinstance(model, dict) else []
-                model_info += f", initial_keys={top_keys!r}, videoModel_keys={model_keys!r}"
-        except Exception:
-            model_info += ", initials_json=unparseable"
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                initial_data = parsed
+                initial_keys = sorted(str(k) for k in parsed.keys())
+                parse_state = "parsed"
+        except (TypeError, ValueError):
+            pass
+
+    model_present = isinstance(initial_data, dict) and "videoModel" in initial_data
+    model = initial_data.get("videoModel") if isinstance(initial_data, dict) else None
+    model_type = type(model).__name__ if model_present else "missing"
+    model_keys = sorted(str(k) for k in model.keys())[:40] if isinstance(model, dict) else []
+
+    placeholder = initial_data.get("avPlaceholderComponent") if isinstance(initial_data, dict) else None
+    placeholder_title = placeholder.get("title", "") if isinstance(placeholder, dict) else ""
+    placeholder_text = re.sub(r"<[^>]*>", " ", str(placeholder_title)).lower()
+    age_verification_prompt = (
+        "verify your age" in placeholder_text and "logged in" in placeholder_text
+    )
+
+    download_component = (
+        initial_data.get("downloadDropdownComponent") if isinstance(initial_data, dict) else None
+    )
+    component_sources = (
+        download_component.get("sources") if isinstance(download_component, dict) else None
+    )
+    source_types = sorted(str(k) for k in component_sources.keys())[:20] if isinstance(component_sources, dict) else []
+
+    model_summary = (
+        f"initials_json={parse_state}, initial_keys_count={len(initial_keys)}, "
+        f"videoModel_present={model_present}, videoModel_type={model_type}, "
+        f"videoModel_keys={model_keys!r}, age_verification_prompt={age_verification_prompt}, "
+        f"downloadDropdown_sources_present={isinstance(component_sources, dict)}, "
+        f"source_type_keys={source_types!r}"
+    )
     raise StreamResolutionError(
-        f"No M3U8 manifest was found; page_title={page_title!r}, "
-        f"hls_preload_link={'present_but_invalid' if preload_parser.hrefs else 'missing'}, {model_info}. "
-        "The source may have changed its player markup or may require a separate player/API request."
+        f"No M3U8 manifest was found; page_title={page_title!r}, html_chars={html_chars}, "
+        f"hls_preload_link={'present_but_invalid' if preload_parser.hrefs else 'missing'}, "
+        f"{model_summary}. The source may serve a different page variant or require age verification/login."
     )
 
 
