@@ -1,0 +1,8 @@
+{
+  "name": "vid-site-neon-functions",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@neon/config": "latest"
+  }
+}
