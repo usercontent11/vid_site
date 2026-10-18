@@ -8,7 +8,6 @@ on:
       - neon.ts
       - neon-functions/**
       - package.json
-      - .github/workflows/probe-neon-source-page.yml
   workflow_dispatch:
     inputs:
       page_path:
@@ -45,18 +44,14 @@ jobs:
       - name: Deploy protected Neon inspector and fetch source structure
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-          NEON_BRANCH_ID: ${{ secrets.NEON_BRANCH_ID }}
-          NEON_INSPECT_TOKEN: ${{ secrets.NEON_INSPECT_TOKEN }}
+          NEON_PROJECT_ID: sweet-bar-53727848
+          NEON_BRANCH_ID: br-super-sound-b5ty7f80
           SOURCE_COOKIE: ${{ secrets.SOURCE_COOKIE }}
           SITE_BASE_URL: ${{ vars.SITE_BASE_URL || 'https://mobilexh.live' }}
           PAGE_PATH: ${{ inputs.page_path || '/videos/xhfKO6H' }}
         run: |
           set -euo pipefail
           test -n "$NEON_API_KEY" || { echo "Missing NEON_API_KEY repository secret."; exit 2; }
-          test -n "$NEON_PROJECT_ID" || { echo "Missing NEON_PROJECT_ID repository secret."; exit 2; }
-          test -n "$NEON_BRANCH_ID" || { echo "Missing NEON_BRANCH_ID repository secret."; exit 2; }
-          test -n "$NEON_INSPECT_TOKEN" || { echo "Missing NEON_INSPECT_TOKEN repository secret."; exit 2; }
           case "$PAGE_PATH" in
             /videos/*) ;;
             *) echo "page_path must begin with /videos/."; exit 2 ;;
@@ -64,9 +59,14 @@ jobs:
 
           npm install --global neon@latest
 
-          # Create a short-lived, ignored dotenv file so process.env values are
-          # forwarded by the supported neon deploy --env mechanism. JSON quoting
-          # preserves multiline Netscape cookie exports.
+          # Generate a fresh inspector token for this deployment, mask it in
+          # CI logs, and pass it only to Neon plus this workflow's test request.
+          NEON_INSPECT_TOKEN="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          echo "::add-mask::$NEON_INSPECT_TOKEN"
+          export NEON_INSPECT_TOKEN
+
+          # Create a short-lived, ignored dotenv file. JSON quoting preserves
+          # multiline Netscape cookie exports.
           node <<'NODE'
           const fs = require("node:fs");
           const quote = (value) => JSON.stringify(value);
