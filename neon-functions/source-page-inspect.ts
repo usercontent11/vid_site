@@ -13,7 +13,7 @@ const DEFAULT_PREFERENCE_COOKIE = [
   "settings=eyJpc1dlYnBTdXBwb3J0ZWQiOnRydWUsImlzV2VibVN1cHBvcnRlZCI6dHJ1ZSwiZXh0RGV0ZWN0ZWRWMiI6ZmFsc2UsIm1vbWVudHNJc0hpZGRlbiI6bnVsbCwiaXNTaWRlYmFySGlkZGVuIjpudWxsLCJleHBpcmVzIjp7ImV4dERldGVjdGVkVjIiOjE3OTIyNTAyMTB9LCJ0c1Nwb3RDb3VudGVycyI6W3sic3BvdCI6Im1hc3Rlcl9jdWJlIiwidGltZSI6MTc5MjI5MTEyNCwiY291bnQiOjN9LHsic3BvdCI6Im1hc3Rlcl9mb290ZXIiLCJ0aW1lIjoxNzkyMjkxMTI0LCJjb3VudCI6NX0seyJzcG90IjoibmF0aXZlX3RodW1iIiwidGltZSI6MTc5MjI5MTM4NSwiY291bnQiOjF9XX0%3D",
   "recs_show_time=1792294321",
   "u-v-channels=straight%3A424516-2x273-1x43949-1x425459-1",
-].join("; ")
+].join("; ");
 
 type SafeUrl = {
   scheme: string;
