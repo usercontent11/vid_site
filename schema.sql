@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS videos (
 );
 CREATE INDEX IF NOT EXISTS idx_videos_views ON videos(views DESC);
 CREATE INDEX IF NOT EXISTS idx_videos_created_epoch ON videos(created_epoch DESC);
-CREATE INDEX IF NOT EXISTS idx_videos_description_missing ON videos(id) WHERE description IS NULL;
 
 CREATE TABLE IF NOT EXISTS video_categories (
  category_slug TEXT NOT NULL REFERENCES extraction_categories(category_slug) ON DELETE CASCADE,
@@ -59,6 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_video_categories_video_id ON video_categories(vid
 ALTER TABLE videos ADD COLUMN IF NOT EXISTS trailer_cdn_version SMALLINT;
 ALTER TABLE videos ADD COLUMN IF NOT EXISTS access_status TEXT NOT NULL DEFAULT 'unknown';
 ALTER TABLE videos ADD COLUMN IF NOT EXISTS description TEXT;
+CREATE INDEX IF NOT EXISTS idx_videos_description_missing ON videos(id) WHERE description IS NULL;
 ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS completion_reason TEXT;
 ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS lease_owner TEXT;
 ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS lease_expires_at TIMESTAMPTZ;
