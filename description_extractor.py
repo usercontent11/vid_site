@@ -5,7 +5,9 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
+from pathlib import Path
 from urllib.parse import quote, urljoin, urlsplit
 
 import aiohttp
@@ -26,6 +28,44 @@ MAX_TEST_LIMIT = 50
 MAX_WORKERS = 8
 TRANSIENT_STATUSES = {429, 500, 502, 503, 504}
 MAX_HTTP_ATTEMPTS = 4
+DIAGNOSTIC_DIR = Path(os.getenv("DESCRIPTION_DIAGNOSTIC_DIR", "diagnostic"))
+INITIALS_SCRIPT_PATTERN = re.compile(
+    r'<script\b[^>]*\bid=["\']initials-script["\'][^>]*>(.*?)</script\s*>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def extract_initials_script_source(html):
+    """Return the exact inner contents of the source's initials-script element."""
+    if not isinstance(html, str):
+        return None
+    match = INITIALS_SCRIPT_PATTERN.search(html)
+    return match.group(1) if match else None
+
+
+def save_initials_script_diagnostic(video, script_source, error, diagnostic_dir=None):
+    """Write the raw initials-script and a small JSON sidecar for debugging only."""
+    if script_source is None:
+        return None
+    target_dir = Path(diagnostic_dir) if diagnostic_dir is not None else DIAGNOSTIC_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    video_id = int(video["id"])
+    script_name = f"video-{video_id}-initials-script.js"
+    script_path = target_dir / script_name
+    script_path.write_text(script_source, encoding="utf-8")
+    metadata = {
+        "video_id": video_id,
+        "title": video.get("title"),
+        "page_path": video.get("page_path"),
+        "error": str(error),
+        "script_file": script_name,
+        "script_characters": len(script_source),
+    }
+    (target_dir / f"video-{video_id}-diagnostic.json").write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return script_path
 
 
 def extract_video_description(html):
@@ -57,6 +97,7 @@ def make_video_url(path):
 
 
 async def fetch_one(session, video, semaphore, timeout, base_host):
+    html = None
     result = {
         "id": int(video["id"]),
         "title": video["title"],
@@ -111,6 +152,18 @@ async def fetch_one(session, video, semaphore, timeout, base_host):
             except SourceFormatError as exc:
                 result["error"] = str(exc)
                 result["status"] = "parse_error"
+                script_source = extract_initials_script_source(html) if html is not None else None
+                if script_source is not None:
+                    try:
+                        diagnostic_path = save_initials_script_diagnostic(video, script_source, exc)
+                        LOG.warning(
+                            "Saved extracted initials-script for video %s to %s",
+                            result["id"], diagnostic_path,
+                        )
+                    except OSError:
+                        LOG.exception("Could not write initials-script diagnostic for video %s.", result["id"])
+                else:
+                    LOG.warning("No initials-script element was available to save for video %s.", result["id"])
                 return result
             except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
                 if attempt >= MAX_HTTP_ATTEMPTS:

@@ -56,3 +56,12 @@ jobs:
           python -m unittest discover -s tests -v
       - name: Fetch a small description sample
         run: python description_extractor.py --limit "$DESCRIPTION_LIMIT" --workers "$DESCRIPTION_WORKERS"
+
+      - name: Upload initial-script diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: description-initial-script-diagnostics-${{ github.run_id }}
+          path: diagnostic/
+          if-no-files-found: ignore
+          retention-days: 3

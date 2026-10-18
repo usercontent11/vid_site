@@ -30,6 +30,8 @@ The separate **Test video descriptions** workflow uses direct asynchronous HTTP 
 
 Run this workflow first with the default **limit=5**. Inspect the Actions log and the corresponding rows in Neon before increasing the test sample. This workflow is purposefully bounded; it is not the bulk backfill job for all videos.
 
+When a fetched page has a parse error, the workflow writes the exact inner contents of its `initials-script` element to `diagnostic/video-<id>-initials-script.js`, with a JSON sidecar describing the video ID and parse error. These files are **not committed to the repository**; a separate GitHub Actions artifact named `description-initial-script-diagnostics-<run id>` is uploaded for 3 days. No diagnostic script is written to Neon, and successful video rows keep the normal upsert behavior. The captured script may contain page-specific data, so download or share it only with trusted collaborators.
+
 ## Resume and cross-run coordination
 
 Every category-extraction run using the same Neon database shares `extraction_categories`. A `FOR UPDATE SKIP LOCKED` claim, lease owner and expiry prevent two workers from intentionally claiming the same active category. Abandoned claims are recoverable after lease expiry. Per-page video upserts and cursor updates commit atomically. To extend from 40 pages to 80, dispatch with `max_pages=80`; categories stopped at the old limit resume from their stored `next_page`. Categories that reached a real end-of-list are not reopened automatically.
