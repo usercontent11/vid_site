@@ -227,9 +227,13 @@ def apply_cookie_secret(session, cookie_text=None):
             if not hostname:
                 raise RuntimeError("SITE_BASE_URL must include a hostname to set g_state.")
             value = json.dumps(state, separators=(",", ":"), ensure_ascii=False)
-            session.cookies.set("g_state", value, domain=hostname, path="/")
-            LOG.info("Loaded 1 request cookie from raw g_state JSON; cookie values are not logged.")
-            return
+            # Raw g_state JSON is only one cookie, not a complete export. Preserve
+            # the built-in consent/age preference cookies and add g_state to them.
+            cookie_domain = hostname if hostname.startswith(".") else "." + hostname
+            raw = DEFAULT_COOKIE_FILE.rstrip() + "\n" + (
+                f"{cookie_domain}\tTRUE\t/\tFALSE\t0\tg_state\t{value}"
+            )
+            LOG.info("Loaded raw g_state JSON alongside default preference cookies; cookie values are not logged.")
 
     escaped = raw.lstrip().startswith("\\# Netscape")
     count = 0
