@@ -82,6 +82,9 @@ def headers(response):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    if request.path.startswith("/api/stream/"):
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
     return response
 
 def decorate_video(row):
