@@ -1,9 +1,19 @@
 const DEFAULT_BASE_URL = "https://mobilexh.live";
 const MAX_HTML_BYTES = 4 * 1024 * 1024;
-const DEFAULT_PREFERENCE_COOKIE =
-  "cookie_accept_v2=%7B%22e%22%3A1%2C%22f%22%3A1%2C%22t%22%3A1%2C%22a%22%3A1%7D; " +
-  "x_content_preference_index=straight; parental-control=yes; " +
-  "stats_src_last=mobilexh.live; x_csrf_token=1";
+const DEFAULT_PREFERENCE_COOKIE = [
+  "cookie_accept_v2=%7B%22e%22%3A1%2C%22f%22%3A1%2C%22t%22%3A1%2C%22a%22%3A1%7D",
+  "x_content_preference_index=straight",
+  "parental-control=yes",
+  "stats_src_last=mobilexh.live",
+  "x_csrf_token=1",
+  "x_viewes=%5B9981710%2C9996409%5D",
+  "h_v4_straight=%7B%22v%22%3A%5B%5D%2C%22l%22%3A%5B%5D%2C%22f%22%3A%5B%5D%2C%22pv%22%3A%5B9996409%2C9981710%5D%7D",
+  "ff_thumb_offset=6",
+  "moments_listing_ad_offset=6",
+  "settings=eyJpc1dlYnBTdXBwb3J0ZWQiOnRydWUsImlzV2VibVN1cHBvcnRlZCI6dHJ1ZSwiZXh0RGV0ZWN0ZWRWMiI6ZmFsc2UsIm1vbWVudHNJc0hpZGRlbiI6bnVsbCwiaXNTaWRlYmFySGlkZGVuIjpudWxsLCJleHBpcmVzIjp7ImV4dERldGVjdGVkVjIiOjE3OTIyNTAyMTB9LCJ0c1Nwb3RDb3VudGVycyI6W3sic3BvdCI6Im1hc3Rlcl9jdWJlIiwidGltZSI6MTc5MjI5MTEyNCwiY291bnQiOjN9LHsic3BvdCI6Im1hc3Rlcl9mb290ZXIiLCJ0aW1lIjoxNzkyMjkxMTI0LCJjb3VudCI6NX0seyJzcG90IjoibmF0aXZlX3RodW1iIiwidGltZSI6MTc5MjI5MTM4NSwiY291bnQiOjF9XX0%3D",
+  "recs_show_time=1792294321",
+  "u-v-channels=straight%3A424516-2x273-1x43949-1x425459-1",
+].join("; ")
 
 type SafeUrl = {
   scheme: string;
