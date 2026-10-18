@@ -8,9 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from resolver import _read_source_page, inspect_page_structure, source_page_url
 
-ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "diagnostics"
 MAX_SNAPSHOT_CHARS = 4 * 1024 * 1024
 
