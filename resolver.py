@@ -359,6 +359,9 @@ class _PageStructureParser(HTMLParser):
                         }
                 except Exception:
                     pass
+            if self.current_script["id"] == "appcontext-script":
+                # Report object-property identifiers only; never return URL or token values.
+                self.current_script["javascript_structure"] = _javascript_structure_summary(text_value)
             self.scripts.append(self.current_script)
             self.current_script = None
 
@@ -394,6 +397,30 @@ def _interesting_json_key_paths(value, prefix="$", depth=0, budget=None):
             if budget[0] >= 500:
                 break
     return found[:150]
+
+
+def _javascript_structure_summary(script_text: str) -> dict:
+    """Summarize JavaScript object property identifiers without returning values."""
+    key_pattern = re.compile(
+        r"""(?:"([^"\\]{1,100})"|'([^'\\]{1,100})'|([A-Za-z_$][\w$-]{0,99}))\s*:"""
+    )
+    names = set()
+    for match in key_pattern.finditer(script_text or ""):
+        name = next((part for part in match.groups() if part is not None), "")
+        if name and not name.startswith(("http:", "https:")):
+            names.add(name)
+        if len(names) >= 400:
+            break
+    interesting = sorted(
+        name for name in names
+        if re.search(r"(video|player|stream|source|hls|m3u8|media|file|playlist|quality|master|trailer|url|model|manifest|preload|dash|mp4|id|token)", name, re.I)
+    )
+    return {
+        "property_name_count": len(names),
+        "property_names": sorted(names)[:220],
+        "player_related_property_names": interesting[:160],
+        "values_returned": False,
+    }
 
 
 def inspect_page_structure(page_html: str, page_url: str) -> dict:
