@@ -21,7 +21,7 @@ SENSITIVE_KEY_PATTERN = (
 )
 SENSITIVE_ASSIGNMENT_RE = re.compile(
     r"""(?i)(["']?""" + SENSITIVE_KEY_PATTERN + r"""["']?\s*[:=]\s*)"""
-    r"""(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^,;\s}\]]+)"""
+    r"""(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')"""
 )
 QUERY_VALUE_RE = re.compile(
     r"""((?:[?&]|\\u003[fF]|\\u0026)[A-Za-z0-9_.~%+-]+(?:=|\\u003[dD]))"""
