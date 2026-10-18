@@ -56,6 +56,25 @@ class ResolverTests(unittest.TestCase):
             extract_m3u8_url(page, "https://mobilexh.live/videos/x/")
 
 
+    def test_inspects_page_structure_without_exposing_query_values(self):
+        from resolver import inspect_page_structure
+        page = """<html><head><title>Test video</title>
+        <link rel="preload" as="fetch" crossorigin href="https://stream.example/hls/master?token=SECRET123">
+        <script id="initials-script">window.initials = {"videoModel":{"player":{"manifestUrl":"https://stream.example/a.m3u8"}}};</script>
+        </head><body><video controls></video></body></html>"""
+        report = inspect_page_structure(page, "https://mobilexh.live/videos/test/")
+        self.assertEqual(report["page"]["title"], "Test video")
+        self.assertTrue(report["page"]["has_initials_script"])
+        self.assertEqual(report["keyword_counts"]["m3u8"], 1)
+        link = report["links"][0]
+        self.assertTrue(link["crossorigin_attribute_present"])
+        self.assertEqual(link["href"]["query_parameter_names"], ["token"])
+        self.assertNotIn("SECRET123", repr(report))
+        initial = next(s for s in report["scripts"] if s["id"] == "initials-script")
+        self.assertIn("$.videoModel", repr(initial["json"]["interesting_key_paths"]))
+        self.assertIn("video", report["media_elements"][0]["tag"])
+
+
     @patch("resolver.http_session")
     def test_source_fetch_uses_shared_cookie_session(self, shared_session):
         class FakeResponse:

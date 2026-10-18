@@ -35,3 +35,8 @@ This HTTP request is implemented in Flask rather than in a regular PostgreSQL fu
 5. Submit `/sitemap.xml` in Google Search Console and validate video structured data with Google's Rich Results Test.
 
 SEO markup improves crawlability and rich-result eligibility; it cannot guarantee ranking for every URL. Search engines still evaluate unique content, quality, page experience, playback availability, and site authority.
+
+
+## Temporary source-page diagnostics
+
+For troubleshooting only, set `STREAM_DIAGNOSTICS_TOKEN` in Vercel to a long random secret. The endpoint `/api/diagnostics/source-page/<video_id>` requires the `X-Diagnostics-Token` request header and returns a redacted page-structure report: title, link/script tags, relevant JSON key paths, media tags, keyword counts, and cookie *names* only. URL query values, cookie values, and raw HTML are never returned. Use the report to find the actual source player preload or script/API hint, then remove the diagnostic token from Vercel after diagnosis.

@@ -1,13 +1,14 @@
 """Server-rendered Flask video site for Vercel and Neon PostgreSQL."""
 from __future__ import annotations
-import html, json, logging, math, os, re
+import html, hmac, json, logging, math, os, re
 from datetime import datetime, timezone
 from urllib.parse import quote, urljoin, urlsplit
 import xml.etree.ElementTree as ET
 import psycopg
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 from psycopg.rows import dict_row
-from resolver import StreamResolutionError, resolve_stream_url
+from resolver import StreamResolutionError, inspect_source_page_structure, resolve_stream_url
+from extractor import http_session
 
 app = Flask(__name__)
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
@@ -82,9 +83,10 @@ def headers(response):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
-    if request.path.startswith("/api/stream/"):
+    if request.path.startswith("/api/stream/") or request.path.startswith("/api/diagnostics/"):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
 def decorate_video(row):
@@ -348,6 +350,43 @@ def video_sitemap(chunk):
 @app.get("/robots.txt")
 def robots():
     return (f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {abs_url('/sitemap.xml')}\n",200,{"Content-Type":"text/plain; charset=utf-8"})
+
+@app.get("/api/diagnostics/source-page/<int:video_id>")
+def source_page_diagnostics(video_id):
+    """Temporary, token-protected structural diagnostics; never returns raw page HTML."""
+    expected = os.getenv("STREAM_DIAGNOSTICS_TOKEN", "").strip()
+    supplied = request.headers.get("X-Diagnostics-Token", "").strip()
+    if not expected:
+        abort(404)
+    if not supplied or not hmac.compare_digest(supplied, expected):
+        abort(403)
+
+    with db() as conn:
+        video = conn.execute(
+            "SELECT id, page_path, access_status FROM videos WHERE id = %s",
+            (video_id,),
+        ).fetchone()
+    if not video or video.get("access_status") in {"premium", "inaccessible"}:
+        abort(404)
+
+    try:
+        report = inspect_source_page_structure(video["page_path"], SOURCE_BASE_URL)
+        cookies = http_session().cookies
+        report["request_session"] = {
+            "cookie_count": len(cookies),
+            "cookie_names": sorted({c.name for c in cookies}),
+            "g_state_present": any(c.name == "g_state" for c in cookies),
+            "cookie_values_returned": False,
+        }
+        report["video_id"] = int(video_id)
+        report["source_path"] = internal_path(video.get("page_path"))
+        return jsonify(report)
+    except StreamResolutionError as exc:
+        return jsonify({"video_id": video_id, "error": str(exc)}), 502
+    finally:
+        # The page structure and query-free URL paths are sensitive diagnostics.
+        pass
+
 
 @app.get("/healthz")
 def healthz():

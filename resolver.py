@@ -247,3 +247,188 @@ def resolve_stream_url(page_path: str, source_base_url: str) -> str:
     source_host = (urlsplit(source_base_url).hostname or "").lower()
     final_url, page_html = _read_source_page(page_url, source_host)
     return extract_m3u8_url(page_html, final_url)
+
+
+def _safe_url_summary(value: str | None, page_url: str) -> dict | None:
+    """Summarize URLs without returning query values, which may contain signed tokens."""
+    if not value:
+        return None
+    from urllib.parse import parse_qsl
+
+    try:
+        absolute = urljoin(page_url, html.unescape(value.strip()))
+        parsed = urlsplit(absolute)
+        query_names = sorted({name for name, _value in parse_qsl(parsed.query, keep_blank_values=True)})
+        return {
+            "scheme": parsed.scheme,
+            "host": (parsed.hostname or "")[:160],
+            "path": parsed.path[:320],
+            "has_query": bool(parsed.query),
+            "query_parameter_names": query_names[:40],
+            "has_fragment": bool(parsed.fragment),
+        }
+    except Exception:
+        return {"parse_error": True}
+
+
+class _PageStructureParser(HTMLParser):
+    """Collect markup structure and player-related hints without retaining values in output."""
+
+    def __init__(self, page_url: str):
+        super().__init__(convert_charrefs=True)
+        self.page_url = page_url
+        self.title_parts = []
+        self.in_title = False
+        self.current_script = None
+        self.scripts = []
+        self.links = []
+        self.media_elements = []
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        attr = {key.lower(): value for key, value in attrs if key}
+        if tag == "title":
+            self.in_title = True
+        if tag == "script":
+            self.current_script = {
+                "id": (attr.get("id") or "")[:120],
+                "type": (attr.get("type") or "")[:100],
+                "src": _safe_url_summary(attr.get("src"), self.page_url),
+                "chars": 0,
+                "contains": set(),
+                "_text": [],
+            }
+        elif tag == "link":
+            rel = (attr.get("rel") or "").lower().split()
+            self.links.append({
+                "rel": rel[:12],
+                "as": (attr.get("as") or "")[:60],
+                "type": (attr.get("type") or "")[:100],
+                "crossorigin_attribute_present": "crossorigin" in attr,
+                "href": _safe_url_summary(attr.get("href"), self.page_url),
+            })
+        elif tag in {"video", "source", "iframe", "object", "embed"}:
+            self.media_elements.append({
+                "tag": tag,
+                "type": (attr.get("type") or "")[:100],
+                "src": _safe_url_summary(attr.get("src"), self.page_url),
+                "data_url": _safe_url_summary(attr.get("data"), self.page_url),
+                "attribute_names": sorted(k for k in attr if k not in {"src", "data"})[:60],
+            })
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag == "title":
+            self.in_title = False
+        if tag == "script" and self.current_script is not None:
+            text_value = "".join(self.current_script.pop("_text", []))
+            lowered = text_value.lower()
+            for term in ("m3u8", "videoModel", "videoDescription", "player", "playlist",
+                         "hls", "master", "sources", "videoUrl", "video_url", "stream", "media"):
+                if term.lower() in lowered:
+                    self.current_script["contains"].add(term)
+            self.current_script["contains"] = sorted(self.current_script["contains"])
+            self.current_script["chars"] = len(text_value)
+            self.current_script["id"] = self.current_script["id"] or None
+            self.current_script["type"] = self.current_script["type"] or None
+            self.current_script["json"] = None
+            stripped = text_value.strip()
+            if self.current_script["id"] == "initials-script":
+                raw = re.sub(r"^\s*window\.initials\s*=\s*", "", stripped, count=1).strip()
+                if raw.endswith(";"):
+                    raw = raw[:-1]
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, dict):
+                        model = parsed.get("videoModel")
+                        self.current_script["json"] = {
+                            "top_level_keys": sorted(str(k) for k in parsed.keys())[:100],
+                            "videoModel_type": type(model).__name__ if "videoModel" in parsed else "missing",
+                            "videoModel_keys": sorted(str(k) for k in model.keys())[:100] if isinstance(model, dict) else [],
+                            "interesting_key_paths": _interesting_json_key_paths(parsed),
+                        }
+                except Exception:
+                    self.current_script["json"] = {"parse_error": True}
+            elif ("json" in (self.current_script["type"] or "").lower() or stripped.startswith(("{", "["))):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, (dict, list)):
+                        self.current_script["json"] = {
+                            "top_level_type": type(parsed).__name__,
+                            "interesting_key_paths": _interesting_json_key_paths(parsed),
+                        }
+                except Exception:
+                    pass
+            self.scripts.append(self.current_script)
+            self.current_script = None
+
+    def handle_data(self, data):
+        if self.in_title:
+            self.title_parts.append(data)
+        if self.current_script is not None:
+            self.current_script["_text"].append(data)
+
+
+def _interesting_json_key_paths(value, prefix="$", depth=0, budget=None):
+    """Return JSON key names/path only, never field values; bound traversal for large scripts."""
+    if budget is None:
+        budget = [0]
+    if depth > 7 or budget[0] >= 500:
+        return []
+    found = []
+    if isinstance(value, dict):
+        for key, child in list(value.items())[:200]:
+            budget[0] += 1
+            key_text = str(key)[:100]
+            path = prefix + "." + key_text
+            if re.search(r"(video|player|stream|source|hls|m3u8|media|file|playlist|quality|master|trailer|url|model|manifest|preload|dash|mp4)", key_text, re.I):
+                found.append({"path": path, "value_type": type(child).__name__})
+            if isinstance(child, (dict, list)):
+                found.extend(_interesting_json_key_paths(child, path, depth + 1, budget))
+            if budget[0] >= 500:
+                break
+    elif isinstance(value, list):
+        for idx, child in enumerate(value[:80]):
+            if isinstance(child, (dict, list)):
+                found.extend(_interesting_json_key_paths(child, f"{prefix}[{idx}]", depth + 1, budget))
+            if budget[0] >= 500:
+                break
+    return found[:150]
+
+
+def inspect_page_structure(page_html: str, page_url: str) -> dict:
+    """Build a safe JSON structure report for the source page; redact URL query values."""
+    parser = _PageStructureParser(page_url)
+    parser.feed(page_html or "")
+    parser.close()
+    text_lower = (page_html or "").lower()
+    terms = ("m3u8", "videomodel", "videodescription", "player", "playlist", "hls", "master",
+             "sources", "videourl", "stream", "manifest", "application/json")
+    keyword_counts = {term: text_lower.count(term.lower()) for term in terms}
+    links = parser.links[:100]
+    scripts = parser.scripts[:100]
+    return {
+        "page": {
+            "title": re.sub(r"\s+", " ", html.unescape(" ".join(parser.title_parts))).strip()[:200],
+            "url": _safe_url_summary(page_url, page_url),
+            "html_characters": len(page_html or ""),
+            "has_initials_script": any(s.get("id") == "initials-script" for s in scripts),
+        },
+        "keyword_counts": keyword_counts,
+        "link_count": len(parser.links),
+        "links": links,
+        "script_count": len(parser.scripts),
+        "scripts": scripts,
+        "media_element_count": len(parser.media_elements),
+        "media_elements": parser.media_elements[:60],
+    }
+
+
+def inspect_source_page_structure(page_path: str, source_base_url: str) -> dict:
+    """Fetch the configured source page and return a redacted structural report."""
+    page_url = source_page_url(page_path, source_base_url)
+    source_host = (urlsplit(source_base_url).hostname or "").lower()
+    final_url, body = _read_source_page(page_url, source_host)
+    report = inspect_page_structure(body, final_url)
+    report["fetch"] = {"ok": True, "redirected_within_source_host": final_url != page_url}
+    return report
