@@ -30,6 +30,14 @@ The separate **Test video descriptions** workflow uses direct asynchronous HTTP 
 
 Run this workflow first with the default **limit=5**. Inspect the Actions log and the corresponding rows in Neon before increasing the test sample. This workflow is purposefully bounded; it is not the bulk backfill job for all videos.
 
+## Full-scale description backfill
+
+After the small test reports successful extractions, open Actions → **Backfill video descriptions** → Run workflow. Defaults are a database `batch_size=100`, `workers=5`, and `max_videos=0` (all remaining eligible videos). The worker count is capped at 8 and the batch size at 500. A single run is serialized against other backfill runs.
+
+The backfill iterates through existing `videos` rows with `description IS NULL`, using ID-ordered batches and direct asynchronous HTTP requests. Successful results are upserted into `videos.description`; rows that already have descriptions are skipped. Failed rows remain NULL and are eligible for another run, while successful rows are not refetched. The log reports starting counts, each batch, outcomes, and how many descriptions remain. Rows whose `page_path` is not a `/videos/...` path are not requested. Diagnostic initial-script files are uploaded as a separate artifact for 3 days if parsing fails.
+
+For the first full run, keep the defaults and `max_videos=0`. If you prefer a bounded rollout, set `max_videos=500`; later runs automatically skip successfully populated descriptions and continue on the still-missing records. Do not run multiple backfills concurrently.
+
 When a fetched page has a parse error, the workflow writes the exact inner contents of its `initials-script` element to `diagnostic/video-<id>-initials-script.js`, with a JSON sidecar describing the video ID and parse error. These files are **not committed to the repository**; a separate GitHub Actions artifact named `description-initial-script-diagnostics-<run id>` is uploaded for 3 days. No diagnostic script is written to Neon, and successful video rows keep the normal upsert behavior. The captured script may contain page-specific data, so download or share it only with trusted collaborators.
 
 ## Resume and cross-run coordination

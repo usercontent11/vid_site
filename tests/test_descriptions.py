@@ -69,6 +69,12 @@ class DescriptionExtractorTests(unittest.TestCase):
     def test_diagnostic_script_extractor_returns_none_if_script_is_absent(self):
         self.assertIsNone(extract_initials_script_source("<html>no initials script</html>"))
 
+
+    def test_bulk_backfill_script_has_bounded_batch_and_worker_limits(self):
+        from bulk_description_backfill import MAX_BATCH_SIZE, MAX_TOTAL_VIDEOS
+        self.assertEqual(MAX_BATCH_SIZE, 500)
+        self.assertEqual(MAX_TOTAL_VIDEOS, 2_000_000)
+
     def test_only_builds_same_site_video_paths(self):
         self.assertTrue(make_video_url("/videos/example").endswith("/videos/example"))
         for bad_path in (
