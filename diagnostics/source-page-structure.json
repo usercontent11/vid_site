@@ -1,0 +1,1459 @@
+{
+  "page": {
+    "title": "xHamster",
+    "url": {
+      "scheme": "https",
+      "host": "mobilexh.live",
+      "path": "/videos/xhfKO6H",
+      "has_query": false,
+      "query_parameter_names": [],
+      "has_fragment": false
+    },
+    "html_characters": 291800,
+    "has_initials_script": true
+  },
+  "keyword_counts": {
+    "m3u8": 0,
+    "videomodel": 5,
+    "videodescription": 0,
+    "player": 19,
+    "playlist": 0,
+    "hls": 6,
+    "master": 7,
+    "sources": 1,
+    "videourl": 0,
+    "stream": 0,
+    "manifest": 4,
+    "application/json": 0
+  },
+  "link_count": 31,
+  "links": [
+    {
+      "rel": [
+        "preconnect"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "ic-ut-nss.xhcdn.com",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "preconnect"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "dns-prefetch"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "collector.mobilexh.live",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "dns-prefetch"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "thumb-v-nss.xhcdn.com",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "dns-prefetch"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "ic-ut-nss.xhcdn.com",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "dns-prefetch"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "www.google-analytics.com",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "dns-prefetch"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "www.googletagmanager.com",
+        "path": "",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "stylesheet"
+      ],
+      "as": "",
+      "type": "text/css",
+      "crossorigin_attribute_present": true,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/css/v7f16b63fc4.start-modal.css",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "stylesheet"
+      ],
+      "as": "",
+      "type": "text/css",
+      "crossorigin_attribute_present": true,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/css/v68afe6db2d.variables.css",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "stylesheet"
+      ],
+      "as": "",
+      "type": "text/css",
+      "crossorigin_attribute_present": true,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/css/v9e9980a836.theme.css",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "stylesheet"
+      ],
+      "as": "",
+      "type": "text/css",
+      "crossorigin_attribute_present": true,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/css/v146d377df2.page-visible.css",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "stylesheet"
+      ],
+      "as": "",
+      "type": "text/css",
+      "crossorigin_attribute_present": true,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/css/v43fadb7525.video-single.css",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "preload"
+      ],
+      "as": "image",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "ic-vrm-nss.xhcdn.com",
+        "path": "/a/ZDZiNGI2NTYzNzBjNGJjZDI3OTMyYzlkMzY3Y2UwZTI/webp(q:75),s(w:2692,h:80)/promo/message/5166/6ad1cab251006.jpg",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "manifest"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": true,
+      "href": {
+        "scheme": "https",
+        "host": "mobilexh.live",
+        "path": "/manifest.webmanifest",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "shortcut",
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-256x256.ico",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "apple-touch-icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/apple-touch-icon-v2.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-512x512.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-384x384.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-256x256.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-192x192.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-180x180.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-152x152.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-144x144.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-128x128.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-120x120.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-96x96.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-72x72.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-48x48.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "icon"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/images/favicon/favicon-v2-32x32.png",
+        "has_query": true,
+        "query_parameter_names": [
+          "v"
+        ],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "canonical"
+      ],
+      "as": "",
+      "type": "",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "xhamster.com",
+        "path": "/videos/xhfKO6H",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    },
+    {
+      "rel": [
+        "stylesheet"
+      ],
+      "as": "",
+      "type": "text/css",
+      "crossorigin_attribute_present": false,
+      "href": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/css/v6c01010c74.font.css",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      }
+    }
+  ],
+  "script_count": 20,
+  "scripts": [
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/locales/ve1c4f267e1.en-start.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/locales/v3d4640b7d7.en.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/js/v474461fec1.runtime.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/js/v3fda662a99.start-polyfills.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/js/v29a75494a6.start.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/js/v3679290fe3.start-modal.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "text/javascript",
+      "src": null,
+      "chars": 1676,
+      "contains": [
+        "media"
+      ],
+      "json": null
+    },
+    {
+      "id": "initials-script",
+      "type": null,
+      "src": null,
+      "chars": 113307,
+      "contains": [
+        "hls",
+        "master",
+        "media",
+        "player",
+        "sources",
+        "videoModel"
+      ],
+      "json": {
+        "top_level_keys": [
+          "aiNoticeComponent",
+          "ampGaUserStatus",
+          "ampServiceWorkerInstallUrl",
+          "avPlaceholderComponent",
+          "bannerBottom",
+          "bannerPrefix",
+          "bannerUnderComments",
+          "commentsComponent",
+          "disableGalleries",
+          "divider",
+          "downloadDropdownComponent",
+          "existsSuggest",
+          "experiment44",
+          "favoritesDropdownComponent",
+          "fidEnabled",
+          "fontFaceProps",
+          "frontStats",
+          "frontStatsAdvanced",
+          "gtmSettings",
+          "handyCredentials",
+          "hasSfwTimecodes",
+          "haveTransliteration",
+          "hostMap",
+          "isBackendWebmSupported",
+          "isBackendWebpSupported",
+          "isDarkTheme",
+          "isDesktop",
+          "isDesktopSite",
+          "isHistoryNeedUserGesture",
+          "isInViewSuccessPercent",
+          "isNativePlayer",
+          "isServiceWorkerAllowed",
+          "isServiceWorkerForced",
+          "isVr",
+          "langList",
+          "language",
+          "layout",
+          "notificationsModel",
+          "orientation",
+          "pageHiddenLink",
+          "pk",
+          "playBackTimerProps",
+          "popunderCookieName",
+          "popunderFrequency",
+          "preferredLang",
+          "prerollAllowed",
+          "prerollConfig",
+          "promo",
+          "ratingComponent",
+          "recaptchaEnterpriseKeyV3",
+          "recaptchaKeyV2",
+          "relatedVideosComponent",
+          "reportButtonComponent",
+          "requestId",
+          "shareButton",
+          "sponsorBannerClass",
+          "sponsorBannerCompanionClass",
+          "sponsorLinkClass",
+          "staticDomain",
+          "stats_tkn",
+          "subscriptionComponent",
+          "uiStats",
+          "urls",
+          "userStatsParams",
+          "videoAutogeneratedMomentsList",
+          "videoEntity",
+          "videoHeadingComponent",
+          "videoModel",
+          "videoSponsor",
+          "videoTagsComponent",
+          "videoTitle",
+          "visitFavorite",
+          "vpnGeoList",
+          "vr",
+          "vrIY-aSbChpopunder",
+          "vrStats",
+          "watchId",
+          "xhlMlSource",
+          "xplayerPluginSettings",
+          "xplayerSettings"
+        ],
+        "videoModel_type": "dict",
+        "videoModel_keys": [
+          "author",
+          "channelModel",
+          "comments",
+          "created",
+          "description",
+          "downloadFile",
+          "duration",
+          "editable",
+          "icon",
+          "id",
+          "idHashSlug",
+          "isFHD",
+          "isHD",
+          "isUHD",
+          "isVR",
+          "landing",
+          "modelName",
+          "modified",
+          "orientation",
+          "pageURL",
+          "previewThumbURL",
+          "rating",
+          "resolution",
+          "secured",
+          "sponsor",
+          "spriteCount",
+          "spriteURL",
+          "status",
+          "thumbURL",
+          "title",
+          "titleLocalized",
+          "trailerURL",
+          "views"
+        ],
+        "interesting_key_paths": [
+          {
+            "path": "$.bannerBottom.master",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.bannerBottom.master.nativeSettings.adsByUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.bannerBottom.widget.isBlurredMedia",
+            "value_type": "bool"
+          },
+          {
+            "path": "$.ratingComponent.ratingModel",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.ratingComponent.ratingModel.modelName",
+            "value_type": "str"
+          },
+          {
+            "path": "$.ratingComponent.ratingModel.entityModel",
+            "value_type": "str"
+          },
+          {
+            "path": "$.ratingComponent.likedPageUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.bannerUnderComments.fh.dataUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.bannerUnderComments.fh.dataUrlFallback",
+            "value_type": "str"
+          },
+          {
+            "path": "$.bannerUnderComments.fh.statUrls",
+            "value_type": "list"
+          },
+          {
+            "path": "$.xhlMlSource",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.videoTagsComponent",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.videoTagsComponent.subscriptionModel",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.videoTagsComponent.subscriptionModel.modelName",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.subscriptionModel.signupSource",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.videoId",
+            "value_type": "int"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[0].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[0].thumbUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[0].subscriptionModel",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[0].subscriptionModel.modelName",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[0].subscriptionModel.signupSource",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[1].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[1].thumbUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[1].subscriptionModel",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[1].subscriptionModel.modelName",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[1].subscriptionModel.signupSource",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[2].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[2].thumbUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[2].subscriptionModel",
+            "value_type": "dict"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[2].subscriptionModel.modelName",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[2].subscriptionModel.signupSource",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[3].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[3].thumbUrl",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[3].subscriptionModel",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[4].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[4].thumbUrl",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[4].subscriptionModel",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[5].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[5].thumbUrl",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[5].subscriptionModel",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[6].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[6].thumbUrl",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[6].subscriptionModel",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[7].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[7].thumbUrl",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[7].subscriptionModel",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[8].url",
+            "value_type": "str"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[8].thumbUrl",
+            "value_type": "NoneType"
+          },
+          {
+            "path": "$.videoTagsComponent.tags[8].subscriptionModel",
+            "value_type": "NoneType"
+          }
+        ]
+      }
+    },
+    {
+      "id": "appcontext-script",
+      "type": null,
+      "src": null,
+      "chars": 28933,
+      "contains": [
+        "media",
+        "player"
+      ],
+      "json": null,
+      "javascript_structure": {
+        "property_name_count": 260,
+        "property_names": [
+          "112",
+          "117",
+          "123",
+          "141",
+          "151",
+          "154",
+          "162",
+          "2007",
+          "2036",
+          "2039",
+          "2049",
+          "26",
+          "3010",
+          "3014",
+          "5006",
+          "5018",
+          "6911",
+          "6912",
+          "7777",
+          "7999",
+          "8016",
+          "ablParams",
+          "acceptedCookies",
+          "adblockEmulated",
+          "ads",
+          "age",
+          "ageAndDocumentFl",
+          "ageEstimation",
+          "ageEstimationAvFlowSteps",
+          "ageOnly",
+          "ageVerif",
+          "ageVerifByEmail",
+          "ageVerificationDialogProps",
+          "ageVerificationInfo",
+          "analytical",
+          "avAgeEstimationErrors",
+          "avAgeEstimationErrorsByProvider",
+          "avAgeEstimationFails",
+          "avAgeEstimationFailsByProvider",
+          "avAgeVerifEmailErrors",
+          "avDeviceCheckFails",
+          "avDigitalIdFails",
+          "avGoogleWalletErrors",
+          "avGoogleWalletFails",
+          "avIdentityDocumentFails",
+          "avPasskeyErrors",
+          "avTotalErrors",
+          "avTotalFails",
+          "avType",
+          "avTypeState",
+          "avsUrls",
+          "back",
+          "backupPixelUrl",
+          "bannerPrefix",
+          "buttonTextForAuth",
+          "city",
+          "class",
+          "clickId",
+          "client_language",
+          "code",
+          "collector",
+          "consentText",
+          "contactUsForm",
+          "contactUsFormFeedback",
+          "context",
+          "cookieAttemptsFailThreshold",
+          "cookiePolicy",
+          "counterCookieName",
+          "country",
+          "countryCode",
+          "creator",
+          "creatorSignupUrls",
+          "currentOrientation",
+          "dating",
+          "defaultCollectionId",
+          "description",
+          "deviceCheck",
+          "dialogCloseType",
+          "digitalId",
+          "displayMode",
+          "dmcaPolicy",
+          "dmcaProtection",
+          "document",
+          "documentOnly",
+          "domain",
+          "essential",
+          "eventPayload",
+          "exit",
+          "experiments",
+          "expsDeprecated",
+          "failAttemptsLimit",
+          "failLimits",
+          "faq",
+          "faqAdrevenue",
+          "forcedTheme",
+          "fromAmpHost",
+          "functional",
+          "generalUrls",
+          "googleClientId",
+          "googleWallet",
+          "group",
+          "hasAcceptanceCookieV2",
+          "hasFrontStats",
+          "hasParentalControl",
+          "hideCookieAnnounce",
+          "href",
+          "http_code",
+          "https",
+          "id",
+          "identityDocument",
+          "index",
+          "ip",
+          "ip_usage_type",
+          "isAgeVerificationRequired",
+          "isAgeVerificationRequiredBeforeSignup",
+          "isAgeVerified",
+          "isAmp",
+          "isAstroHtml",
+          "isAstroJson",
+          "isAstroProxy",
+          "isAuxMetricsCollected",
+          "isBlurredMedia",
+          "isBlurredText",
+          "isBot",
+          "isComeFromAmp",
+          "isCookiesDialogEUOpened",
+          "isCreator",
+          "isDesktopSite",
+          "isEUCountry",
+          "isEmailVerified",
+          "isEmbed",
+          "isForcedDarkTheme",
+          "isHidden",
+          "isHidePwaBanner",
+          "isIn",
+          "isModal",
+          "isMomentsAdsEnabled",
+          "isNewNavEnabled",
+          "isOldBrowser",
+          "isParentalControlPassed",
+          "isProducer",
+          "isProducerForbidden",
+          "isQa",
+          "isRtl",
+          "isSfw",
+          "isStandaloneHidden",
+          "isTranslationSuggestAllowed",
+          "isUpfrontAgeVerification",
+          "isWatchHistoryActive",
+          "isWidgetInfoTooltipEnabled",
+          "isXhlImpressionUser",
+          "isYotiAppHiddenOnInitialPopup",
+          "is_sfw",
+          "isp",
+          "joinedExperiments",
+          "language",
+          "likedPhotos",
+          "likedVideos",
+          "line",
+          "locale",
+          "login",
+          "loginGoogle",
+          "loginTwitter",
+          "logout",
+          "momentsPlayerAssets",
+          "momentsSearch",
+          "myContentMoments",
+          "myContentPhotos",
+          "myFavorites",
+          "myGalleries",
+          "myNftwalletEdit",
+          "myProfile",
+          "myProfileEdit",
+          "myUploadPhotos",
+          "myUploadVideo",
+          "name",
+          "orientation",
+          "pageId",
+          "pageType",
+          "pageValue",
+          "parentalcontrol",
+          "passkey",
+          "passkeyIframe",
+          "passwordRecovery",
+          "performance",
+          "photosSearch",
+          "preferredGeo",
+          "preferredLang",
+          "privacyPolicy",
+          "provider",
+          "proxifiedStatsCollect",
+          "proxy_country",
+          "proxy_type",
+          "recommPromoSignup",
+          "report",
+          "reportContent",
+          "scripts",
+          "session_started_at",
+          "session_token",
+          "shouldAutogenUsername",
+          "shouldForceReloadAfterSignup",
+          "shouldHideAdultContent",
+          "shouldKeepStepOnFail",
+          "shouldOpenAvDialogOnMount",
+          "shouldRenderByIntersection",
+          "shouldRenderByIntersectionDesktop",
+          "shouldRunBackgroundDeviceCheck",
+          "shouldSelfieFirst",
+          "shouldSignupFirst",
+          "shouldSkipFailStatUpdate",
+          "shouldSkipSignupFormSteps",
+          "sidebarState",
+          "signUp",
+          "signUpCreator",
+          "signupDialogProps",
+          "signupSource",
+          "signupUrls",
+          "site",
+          "siteOrientation",
+          "socureSdkKey"
+        ],
+        "player_related_property_names": [
+          "avAgeEstimationErrorsByProvider",
+          "avAgeEstimationFailsByProvider",
+          "avDigitalIdFails",
+          "avIdentityDocumentFails",
+          "avsUrls",
+          "backupPixelUrl",
+          "clickId",
+          "creatorSignupUrls",
+          "defaultCollectionId",
+          "digitalId",
+          "generalUrls",
+          "googleClientId",
+          "hideCookieAnnounce",
+          "id",
+          "identityDocument",
+          "isBlurredMedia",
+          "isHidden",
+          "isHidePwaBanner",
+          "isProducerForbidden",
+          "isStandaloneHidden",
+          "isWidgetInfoTooltipEnabled",
+          "isYotiAppHiddenOnInitialPopup",
+          "likedVideos",
+          "momentsPlayerAssets",
+          "myProfile",
+          "myProfileEdit",
+          "myUploadVideo",
+          "pageId",
+          "provider",
+          "session_token",
+          "shouldHideAdultContent",
+          "sidebarState",
+          "signupSource",
+          "signupUrls",
+          "staticURL",
+          "stats_id",
+          "stats_uid",
+          "url",
+          "urls",
+          "userID",
+          "videoTitlesTranslation",
+          "video_type",
+          "videosSearch",
+          "watchId",
+          "watchLaterCollectionId",
+          "yotiDigitalId",
+          "yotiIdentityDocument",
+          "yotiIdentityDocumentFl"
+        ],
+        "values_returned": false
+      }
+    },
+    {
+      "id": null,
+      "type": null,
+      "src": null,
+      "chars": 9948,
+      "contains": [
+        "hls",
+        "media",
+        "player"
+      ],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/vf3ffae2ade.manifest.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/locales/v3a506f85ea.en-creator.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/locales/vb8e8343b04.en-with-auth.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/locales/v39352ec2fa.en-contact.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/locales/v5af30ed5c9.en-liked.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-shared/js/v299825e8f9.font-face.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": {
+        "scheme": "https",
+        "host": "static-ah.xhcdn.com",
+        "path": "/xh-desktop/js/vb2b3244cbb.video-single.js",
+        "has_query": false,
+        "query_parameter_names": [],
+        "has_fragment": false
+      },
+      "chars": 0,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": null,
+      "chars": 87,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": null,
+      "chars": 897,
+      "contains": [],
+      "json": null
+    },
+    {
+      "id": null,
+      "type": "application/javascript",
+      "src": null,
+      "chars": 1849,
+      "contains": [
+        "master"
+      ],
+      "json": null
+    }
+  ],
+  "media_element_count": 1,
+  "media_elements": [
+    {
+      "tag": "iframe",
+      "type": "",
+      "src": {
+        "scheme": "https",
+        "host": "www.googletagmanager.com",
+        "path": "/ns.html",
+        "has_query": true,
+        "query_parameter_names": [
+          "id"
+        ],
+        "has_fragment": false
+      },
+      "data_url": null,
+      "attribute_names": [
+        "height",
+        "style",
+        "width"
+      ]
+    }
+  ],
+  "capture": {
+    "captured_at_utc": "2026-10-18T17:20:35.960684+00:00",
+    "requested_path": "/videos/xhfKO6H",
+    "response_characters": 291800,
+    "snapshot_redacted": true,
+    "redactions": [
+      "all URL query parameter values",
+      "credential/session-like assignment values",
+      "matching secret-like HTML meta content values"
+    ],
+    "raw_response_committed": false
+  }
+}
