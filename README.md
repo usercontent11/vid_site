@@ -18,6 +18,21 @@ On success, the workflow saves and commits two files under `diagnostics/`:
 
 This is a sanitized snapshot, not the byte-for-byte raw response. The purpose is to inspect markup and script structure without committing signed URLs, tokens, or cookie values to this public repository. The workflow needs repository contents: write permission to commit the files. Each run overwrites the previous snapshot, so inspect or save a copy before running it for another page.
 
+## Test source-page access from a Neon Function
+
+The **Probe source page from Neon Function** workflow deploys a protected Node.js 24 function to a selected Neon branch, fetches a source video page from Neon’s network, and commits a redacted structure report at `diagnostics/neon-source-page-structure.json`. This probe comes before moving the live resolver: we first compare what Neon receives against the GitHub Actions and Vercel responses.
+
+Configure these GitHub Actions repository secrets:
+- `NEON_API_KEY`: a Neon API key allowed to deploy Functions.
+- `NEON_PROJECT_ID`: the Neon project ID.
+- `NEON_BRANCH_ID`: the branch ID where the Function should be deployed.
+- `NEON_INSPECT_TOKEN`: a new long random secret used to protect the inspection endpoint.
+- `SOURCE_COOKIE`: optional. Supply the existing source cookie configuration only if the default preference cookies return a different page.
+
+`SITE_BASE_URL` is an optional repository variable; its default is `https://mobilexh.live`. Open Actions → **Probe source page from Neon Function** → Run workflow. The default page is `/videos/xhfKO6H`; choose another path beginning with `/videos/` to test a different page. Never commit the inspection token or source cookies.
+
+The function returns only response status/size, script and link structure, JSON key names, and safe URL summaries (scheme, host, path, and query-parameter names). It does not return raw HTML, cookie values, or query values. The endpoint requires the bearer token and rejects paths outside the configured source's `/videos/` route. After this diagnostic confirms Neon gets the expected page shape, the production stream resolver can be moved over separately.
+
 ## Category extraction run
 
 Open Actions → Extract category video metadata → Run workflow.
