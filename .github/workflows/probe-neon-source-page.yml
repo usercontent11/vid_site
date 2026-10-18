@@ -1,0 +1,91 @@
+name: Probe source page from Neon Function
+
+on:
+  workflow_dispatch:
+    inputs:
+      page_path:
+        description: "Video path to inspect (path only)"
+        required: true
+        default: "/videos/xhfKO6H"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neon-source-page-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install function configuration dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Deploy protected Neon inspector and fetch source structure
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ secrets.NEON_BRANCH_ID }}
+          NEON_INSPECT_TOKEN: ${{ secrets.NEON_INSPECT_TOKEN }}
+          SOURCE_COOKIE: ${{ secrets.SOURCE_COOKIE }}
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL || 'https://mobilexh.live' }}
+          PAGE_PATH: ${{ inputs.page_path || '/videos/xhfKO6H' }}
+        run: |
+          set -euo pipefail
+          test -n "$NEON_API_KEY" || { echo "Missing NEON_API_KEY repository secret."; exit 2; }
+          test -n "$NEON_PROJECT_ID" || { echo "Missing NEON_PROJECT_ID repository secret."; exit 2; }
+          test -n "$NEON_BRANCH_ID" || { echo "Missing NEON_BRANCH_ID repository secret."; exit 2; }
+          test -n "$NEON_INSPECT_TOKEN" || { echo "Missing NEON_INSPECT_TOKEN repository secret."; exit 2; }
+          case "$PAGE_PATH" in
+            /videos/*) ;;
+            *) echo "page_path must begin with /videos/."; exit 2 ;;
+          esac
+
+          npm install --global neon@latest
+          neon deploy --project-id "$NEON_PROJECT_ID" --branch "$NEON_BRANCH_ID" --yes --no-env-pull
+
+          FUNCTION_JSON="$(neon functions get sourcepageinspect --project-id "$NEON_PROJECT_ID" --branch "$NEON_BRANCH_ID" -o json)"
+          FUNCTION_URL="$(printf '%s' "$FUNCTION_JSON" | node -e '
+            let input = "";
+            process.stdin.setEncoding("utf8");
+            process.stdin.on("data", (chunk) => input += chunk);
+            process.stdin.on("end", () => {
+              const result = JSON.parse(input);
+              const url = result.invocation_url || result.function?.invocation_url || result.url;
+              if (!url || typeof url !== "string" || !url.startsWith("https://")) process.exit(3);
+              process.stdout.write(url);
+            });
+          ')"
+
+          ENCODED_PATH="$(node -e 'process.stdout.write(encodeURIComponent(process.env.PAGE_PATH))')"
+          mkdir -p diagnostics
+          curl --fail --silent --show-error --max-time 30 \
+            -H "Authorization: Bearer $NEON_INSPECT_TOKEN" \
+            "$FUNCTION_URL?path=$ENCODED_PATH" \
+            -o diagnostics/neon-source-page-structure.json
+
+          python -m json.tool diagnostics/neon-source-page-structure.json >/dev/null
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diagnostics/neon-source-page-structure.json
+          if git diff --cached --quiet; then
+            echo "Neon source-page structure is unchanged; no commit was needed."
+            exit 0
+          fi
+          git diff --cached --stat
+          git commit -m "Save source page structure from Neon Function"
+          git push
