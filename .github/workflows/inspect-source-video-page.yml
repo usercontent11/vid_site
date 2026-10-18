@@ -1,6 +1,12 @@
 name: Inspect source video page
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/capture_source_page.py
+      - .github/workflows/inspect-source-video-page.yml
   workflow_dispatch:
     inputs:
       page_path:
@@ -38,7 +44,7 @@ jobs:
         env:
           SITE_BASE_URL: ${{ vars.SITE_BASE_URL || 'https://mobilexh.live' }}
           SOURCE_COOKIE: ${{ secrets.SOURCE_COOKIE }}
-          PAGE_PATH: ${{ inputs.page_path }}
+          PAGE_PATH: ${{ inputs.page_path || '/videos/xhfKO6H' }}
         run: python scripts/capture_source_page.py "$PAGE_PATH"
 
       - name: Commit snapshot to repository
