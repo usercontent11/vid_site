@@ -37,6 +37,25 @@ class ResolverTests(unittest.TestCase):
             extract_m3u8_url(page, "https://mobilexh.live/videos/x/")
 
 
+    def test_extracts_source_preload_link_without_m3u8_suffix(self):
+        page = '''
+        <html><head>
+        <link rel="preload" as="fetch" crossorigin href="https://media.example-cdn.net/hls/master?token=abc">
+        </head><body><div id="player"></div></body></html>
+        '''
+        self.assertEqual(
+            extract_m3u8_url(page, "https://mobilexh.live/videos/x/"),
+            "https://media.example-cdn.net/hls/master?token=abc",
+        )
+
+    def test_rejects_unsafe_preload_link(self):
+        page = '''
+        <link rel="preload" as="fetch" crossorigin href="https://127.0.0.1/hls/master">
+        '''
+        with self.assertRaises(StreamResolutionError):
+            extract_m3u8_url(page, "https://mobilexh.live/videos/x/")
+
+
     @patch("resolver.http_session")
     def test_source_fetch_uses_shared_cookie_session(self, shared_session):
         class FakeResponse:

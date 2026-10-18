@@ -1,8 +1,9 @@
-"""Resolve an M3U8 URL from the configured public video source page."""
+"""Resolve HLS from the source page's player-preload link or embedded HTML."""
 import html
 import ipaddress
 import json
 import re
+from html.parser import HTMLParser
 from urllib.parse import quote, urljoin, urlsplit
 
 import requests
@@ -23,8 +24,28 @@ class StreamResolutionError(RuntimeError):
     """The source page did not produce a safe public HLS manifest."""
 
 
+class _HlsPreloadParser(HTMLParser):
+    """Find the source site's documented preload hint for its HLS master playlist."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.hrefs = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "link":
+            return
+        values = {key.lower(): value for key, value in attrs if key}
+        rel = set((values.get("rel") or "").lower().split())
+        resource_type = (values.get("as") or "").lower()
+        # XHamster embeds its master playlist in a fetch preload link.
+        if "preload" in rel and resource_type == "fetch" and "crossorigin" in values:
+            href = values.get("href")
+            if href:
+                self.hrefs.append(href.strip())
+
+
 def source_page_url(page_path: str, source_base_url: str) -> str:
-    """Build a source URL from a stored, path-only videos URL."""
+    """Build a source URL from a stored, path-only /videos/... URL."""
     if not isinstance(page_path, str) or not page_path.strip():
         raise StreamResolutionError("Missing video page path.")
     path = urlsplit(page_path.strip())
@@ -44,9 +65,19 @@ def source_page_url(page_path: str, source_base_url: str) -> str:
     return result
 
 
-def validate_manifest(value: str, page_url: str) -> str | None:
-    """Accept an HTTPS M3U8 URL without maintaining a static CDN hostname list."""
-    candidate = html.unescape(value.strip()).rstrip(";,)]}")
+def _normalize_url_text(value: str) -> str:
+    value = html.unescape(value.strip())
+    # The source serializes slashes both as escaped slashes and as JSON Unicode escapes.
+    value = value.replace("\\/", "/")
+    value = re.sub(r"\\u002[fF]", "/", value)
+    value = re.sub(r"\\u0026", "&", value)
+    value = re.sub(r"\\u003[dD]", "=", value)
+    return value
+
+
+def validate_public_https_url(value: str, page_url: str) -> str | None:
+    """Validate an HTTPS URL without assuming the stream host or filename extension."""
+    candidate = _normalize_url_text(value)
     if not candidate:
         return None
     try:
@@ -61,7 +92,6 @@ def validate_manifest(value: str, page_url: str) -> str | None:
         or parsed.username
         or parsed.password
         or port not in (None, 443)
-        or not parsed.path.lower().endswith(".m3u8")
     ):
         return None
 
@@ -71,8 +101,8 @@ def validate_manifest(value: str, page_url: str) -> str | None:
     ):
         return None
     try:
-        ip = ipaddress.ip_address(hostname)
-        if not ip.is_global:
+        address = ipaddress.ip_address(hostname)
+        if not address.is_global:
             return None
     except ValueError:
         if "." not in hostname:
@@ -80,18 +110,36 @@ def validate_manifest(value: str, page_url: str) -> str | None:
     return parsed.geturl()
 
 
+def validate_manifest(value: str, page_url: str) -> str | None:
+    """Validate a direct manifest URL whose path ends in .m3u8."""
+    normalized = _normalize_url_text(value).rstrip(";,)]}")
+    result = validate_public_https_url(normalized, page_url)
+    if not result:
+        return None
+    if not urlsplit(result).path.lower().endswith(".m3u8"):
+        return None
+    return result
+
+
 def extract_m3u8_url(page_html: str, page_url: str) -> str:
-    """Extract a valid HTTPS M3U8 URL from source HTML, with safe diagnostics."""
+    """Get the HLS URL from the player's preload hint, then fall back to URL scanning."""
     if not isinstance(page_html, str) or not page_html:
         raise StreamResolutionError("The source page was empty.")
 
-    normalized = html.unescape(page_html)
-    normalized = (
-        normalized.replace("\\/", "/")
-        .replace("\\u0026", "&")
-        .replace("\\u003d", "=")
-        .replace("\\u002f", "/")
-    )
+    # This is how the source player exposes its master playlist. Do this before
+    # scanning text for a literal .m3u8 extension: some playlist URLs have no suffix.
+    preload_parser = _HlsPreloadParser()
+    try:
+        preload_parser.feed(page_html)
+        preload_parser.close()
+    except Exception:
+        pass
+    for href in preload_parser.hrefs:
+        candidate = validate_public_https_url(href, page_url)
+        if candidate:
+            return candidate
+
+    normalized = _normalize_url_text(page_html)
     candidates = PATTERN.findall(normalized)
     for candidate in candidates:
         manifest = validate_manifest(candidate, page_url)
@@ -100,7 +148,7 @@ def extract_m3u8_url(page_html: str, page_url: str) -> str:
     if candidates:
         raise StreamResolutionError("An M3U8 link was found but was not a valid public HTTPS manifest.")
 
-    # Log page structure only, never raw HTML, cookies, stream URLs, or tokens.
+    # Log page structure only; never raw HTML, cookies, stream URLs, or tokens.
     title_match = re.search(r"<title[^>]*>(.*?)</title\s*>", page_html, re.I | re.S)
     page_title = (
         re.sub(r"\s+", " ", html.unescape(title_match.group(1))).strip()[:100]
@@ -111,28 +159,25 @@ def extract_m3u8_url(page_html: str, page_url: str) -> str:
         page_html,
         re.I | re.S,
     )
-    if not script_match:
-        raise StreamResolutionError(
-            f"No M3U8 manifest was found; page_title={page_title!r}, initials_script=missing. "
-            "The source may have returned a challenge/consent page or load the player through a separate request."
-        )
-
-    model_info = "initials_script=present"
-    try:
-        raw = re.sub(r"^\s*window\.initials\s*=\s*", "", script_match.group(1).strip(), count=1).strip()
-        if raw.endswith(";"):
-            raw = raw[:-1]
-        initial_data = json.loads(raw)
-        if isinstance(initial_data, dict):
-            top_keys = sorted(str(k) for k in initial_data.keys())[:30]
-            model = initial_data.get("videoModel")
-            model_keys = sorted(str(k) for k in model.keys())[:30] if isinstance(model, dict) else []
-            model_info += f", initial_keys={top_keys!r}, videoModel_keys={model_keys!r}"
-    except Exception:
-        model_info += ", initials_json=unparseable"
+    model_info = "initials_script=missing"
+    if script_match:
+        model_info = "initials_script=present"
+        try:
+            raw = re.sub(r"^\s*window\.initials\s*=\s*", "", script_match.group(1).strip(), count=1).strip()
+            if raw.endswith(";"):
+                raw = raw[:-1]
+            initial_data = json.loads(raw)
+            if isinstance(initial_data, dict):
+                top_keys = sorted(str(k) for k in initial_data.keys())[:30]
+                model = initial_data.get("videoModel")
+                model_keys = sorted(str(k) for k in model.keys())[:30] if isinstance(model, dict) else []
+                model_info += f", initial_keys={top_keys!r}, videoModel_keys={model_keys!r}"
+        except Exception:
+            model_info += ", initials_json=unparseable"
     raise StreamResolutionError(
-        f"No M3U8 manifest was found; page_title={page_title!r}, {model_info}. "
-        "The source may load playback data through a separate player/API request."
+        f"No M3U8 manifest was found; page_title={page_title!r}, "
+        f"hls_preload_link={'present_but_invalid' if preload_parser.hrefs else 'missing'}, {model_info}. "
+        "The source may have changed its player markup or may require a separate player/API request."
     )
 
 
@@ -141,8 +186,7 @@ def _read_source_page(url: str, source_host: str) -> tuple[str, str]:
     current = url
     for attempt in range(2):
         try:
-            # Reuse the same source session/cookies as the metadata extractor. The
-            # source can otherwise return a consent/age-preference page with no player.
+            # Reuse the same source session/cookies as the metadata extractor.
             response = http_session().get(
                 current,
                 headers=HEADERS,
@@ -198,7 +242,7 @@ def _read_source_page(url: str, source_host: str) -> tuple[str, str]:
 
 
 def resolve_stream_url(page_path: str, source_base_url: str) -> str:
-    """Resolve from the configured source page; never persist the M3U8 URL."""
+    """Resolve from the configured source page; never persist the HLS URL."""
     page_url = source_page_url(page_path, source_base_url)
     source_host = (urlsplit(source_base_url).hostname or "").lower()
     final_url, page_html = _read_source_page(page_url, source_host)
