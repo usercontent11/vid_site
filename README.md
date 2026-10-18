@@ -6,7 +6,7 @@ This workflow extracts category cards into Neon/PostgreSQL. It creates/migrates 
 
 - Add `DATABASE_URL` as a repository Actions secret (Neon connection string).
 - `SITE_BASE_URL` is optional as a repository variable or secret; the default is `https://mobilexh.live`.
-- The request session loads the supplied age/preference cookies by default. The `g_state` value is not embedded in public source. `SOURCE_COOKIE` may contain a Netscape cookie export, a conventional Cookie header, or the raw JSON value of the `g_state` cookie (with `i_l`, `i_ll`, `i_b`, `i_e`, and `i_et` fields). Cookie values are not logged. This secret replaces the default cookie list; use a full cookie export if you need both preference cookies and `g_state`.
+- The request session loads the supplied age/preference cookies by default. The `g_state` value is not embedded in public source. `SOURCE_COOKIE` may contain a Netscape cookie export, a conventional Cookie header, or the raw JSON value of the `g_state` cookie (with `i_l`, `i_ll`, `i_b`, `i_e`, and `i_et` fields). A raw `g_state` JSON value is added alongside the default preference cookies; a complete Netscape export or Cookie header replaces the defaults. Cookie values are not logged.
 
 ## Category extraction run
 
