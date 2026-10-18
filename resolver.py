@@ -1,10 +1,12 @@
 """Resolve an M3U8 URL from the configured public video source page."""
 import html
 import ipaddress
+import json
 import re
 from urllib.parse import quote, urljoin, urlsplit
 
 import requests
+from extractor import http_session
 
 PATTERN = re.compile(
     r"""(?i)(https?://[^\s"'<>]+?\.m3u8(?:\?[^\s"'<>]*)?|/[^\s"'<>]+?\.m3u8(?:\?[^\s"'<>]*)?)"""
@@ -79,7 +81,7 @@ def validate_manifest(value: str, page_url: str) -> str | None:
 
 
 def extract_m3u8_url(page_html: str, page_url: str) -> str:
-    """Extract any valid public HTTPS M3U8 URL found inside source HTML."""
+    """Extract a valid HTTPS M3U8 URL from source HTML, with safe diagnostics."""
     if not isinstance(page_html, str) or not page_html:
         raise StreamResolutionError("The source page was empty.")
 
@@ -97,7 +99,41 @@ def extract_m3u8_url(page_html: str, page_url: str) -> str:
             return manifest
     if candidates:
         raise StreamResolutionError("An M3U8 link was found but was not a valid public HTTPS manifest.")
-    raise StreamResolutionError("No M3U8 manifest was found in the source page.")
+
+    # Log page structure only, never raw HTML, cookies, stream URLs, or tokens.
+    title_match = re.search(r"<title[^>]*>(.*?)</title\s*>", page_html, re.I | re.S)
+    page_title = (
+        re.sub(r"\s+", " ", html.unescape(title_match.group(1))).strip()[:100]
+        if title_match else "missing"
+    )
+    script_match = re.search(
+        r'<script\b[^>]*\bid=["\']initials-script["\'][^>]*>(.*?)</script\s*>',
+        page_html,
+        re.I | re.S,
+    )
+    if not script_match:
+        raise StreamResolutionError(
+            f"No M3U8 manifest was found; page_title={page_title!r}, initials_script=missing. "
+            "The source may have returned a challenge/consent page or load the player through a separate request."
+        )
+
+    model_info = "initials_script=present"
+    try:
+        raw = re.sub(r"^\s*window\.initials\s*=\s*", "", script_match.group(1).strip(), count=1).strip()
+        if raw.endswith(";"):
+            raw = raw[:-1]
+        initial_data = json.loads(raw)
+        if isinstance(initial_data, dict):
+            top_keys = sorted(str(k) for k in initial_data.keys())[:30]
+            model = initial_data.get("videoModel")
+            model_keys = sorted(str(k) for k in model.keys())[:30] if isinstance(model, dict) else []
+            model_info += f", initial_keys={top_keys!r}, videoModel_keys={model_keys!r}"
+    except Exception:
+        model_info += ", initials_json=unparseable"
+    raise StreamResolutionError(
+        f"No M3U8 manifest was found; page_title={page_title!r}, {model_info}. "
+        "The source may load playback data through a separate player/API request."
+    )
 
 
 def _read_source_page(url: str, source_host: str) -> tuple[str, str]:
@@ -105,7 +141,9 @@ def _read_source_page(url: str, source_host: str) -> tuple[str, str]:
     current = url
     for attempt in range(2):
         try:
-            response = requests.get(
+            # Reuse the same source session/cookies as the metadata extractor. The
+            # source can otherwise return a consent/age-preference page with no player.
+            response = http_session().get(
                 current,
                 headers=HEADERS,
                 timeout=(4, 12),

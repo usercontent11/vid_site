@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from resolver import StreamResolutionError, extract_m3u8_url, source_page_url
+from resolver import StreamResolutionError, extract_m3u8_url, source_page_url, _read_source_page
 
 
 class ResolverTests(unittest.TestCase):
@@ -34,6 +35,36 @@ class ResolverTests(unittest.TestCase):
         page = '<script src="https://127.0.0.1/master.m3u8"></script>'
         with self.assertRaises(StreamResolutionError):
             extract_m3u8_url(page, "https://mobilexh.live/videos/x/")
+
+
+    @patch("resolver.http_session")
+    def test_source_fetch_uses_shared_cookie_session(self, shared_session):
+        class FakeResponse:
+            status_code = 200
+            headers = {}
+            encoding = "utf-8"
+            url = "https://mobilexh.live/videos/example/"
+
+            def raise_for_status(self):
+                return None
+
+            def iter_content(self, chunk_size):
+                yield b"<html><title>Example</title></html>"
+
+            def close(self):
+                return None
+
+        session = shared_session.return_value
+        session.get.return_value = FakeResponse()
+        url, body = _read_source_page(
+            "https://mobilexh.live/videos/example/",
+            "mobilexh.live",
+        )
+        self.assertEqual(url, "https://mobilexh.live/videos/example/")
+        self.assertIn("<title>Example</title>", body)
+        shared_session.assert_called_once_with()
+        session.get.assert_called_once()
+        self.assertFalse(session.get.call_args.kwargs["allow_redirects"])
 
 
 if __name__ == "__main__":
