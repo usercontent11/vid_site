@@ -65,11 +65,21 @@ class ExtractorTests(unittest.TestCase):
 
     def test_default_age_cookie(self):
         session = requests.Session()
-        apply_cookie_secret(session)
+        # Explicit empty input selects defaults even when Actions has SOURCE_COOKIE set.
+        apply_cookie_secret(session, cookie_text="")
         values = {c.name: c.value for c in session.cookies}
         self.assertEqual(values["parental-control"], "yes")
         self.assertEqual(values["x_content_preference_index"], "straight")
         self.assertNotIn("g_state", values)
+
+    def test_raw_g_state_json_cookie_value(self):
+        raw = '{"i_l":0,"i_ll":1792304355741,"i_b":"example-test-value",'
+        raw += '"i_e":{"enable_itp_optimization":24},"i_et":1792304355741}'
+        session = requests.Session()
+        apply_cookie_secret(session, cookie_text=raw)
+        values = {c.name: c.value for c in session.cookies}
+        self.assertIn("g_state", values)
+        self.assertIn('"i_b":"example-test-value"', values["g_state"])
 
 
 if __name__ == "__main__":
