@@ -204,9 +204,33 @@ def claim(owner):
     """
     with db() as conn, conn.transaction(): return conn.execute(sql,(owner,LEASE_MINUTES)).fetchone()
 
-def apply_cookie_secret(session):
-    raw = SOURCE_COOKIE.strip() or DEFAULT_COOKIE_FILE
+def apply_cookie_secret(session, cookie_text=None):
+    """Load a Netscape cookie export, Cookie header, or raw g_state JSON payload.
+
+    Explicit cookie_text makes this independently testable when Actions secrets
+    are injected into the workflow environment.
+    """
+    source = SOURCE_COOKIE if cookie_text is None else cookie_text
+    raw = source.strip() or DEFAULT_COOKIE_FILE
     if "\\n" in raw and "\n" not in raw: raw = raw.replace("\\r\\n","\n").replace("\\n","\n")
+
+    # Some exports provide only the g_state cookie's JSON value rather than
+    # the full "g_state=<json>" Cookie-header entry. Recognize that structure.
+    if raw.startswith("{"):
+        try:
+            state = json.loads(raw)
+        except json.JSONDecodeError:
+            state = None
+        state_keys = {"i_l", "i_ll", "i_b", "i_e", "i_et"}
+        if isinstance(state, dict) and state_keys.issubset(state):
+            hostname = urlsplit(SITE_BASE_URL).hostname
+            if not hostname:
+                raise RuntimeError("SITE_BASE_URL must include a hostname to set g_state.")
+            value = json.dumps(state, separators=(",", ":"), ensure_ascii=False)
+            session.cookies.set("g_state", value, domain=hostname, path="/")
+            LOG.info("Loaded 1 request cookie from raw g_state JSON; cookie values are not logged.")
+            return
+
     escaped = raw.lstrip().startswith("\\# Netscape")
     count = 0
     for original in raw.splitlines():
