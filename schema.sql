@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS extraction_categories (
  category_name TEXT NOT NULL,
  category_path TEXT NOT NULL,
  category_groups TEXT[] NOT NULL DEFAULT '{}'::TEXT[],
+ enabled BOOLEAN NOT NULL DEFAULT TRUE,
  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','completed','failed')),
  next_page INTEGER NOT NULL DEFAULT 1 CHECK(next_page>=1),
  last_page INTEGER NOT NULL DEFAULT 0 CHECK(last_page>=0),
@@ -60,3 +61,4 @@ ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS lease_owner TEXT;
 ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS lease_expires_at TIMESTAMPTZ;
 ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS consecutive_failures INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS category_groups TEXT[] NOT NULL DEFAULT '{}'::TEXT[];
+ALTER TABLE extraction_categories ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;

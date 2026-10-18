@@ -32,7 +32,7 @@ The 16 metadata fields are `id`, `title`, `page_path`, `duration_seconds`, `crea
 
 ## Category path overrides
 
-`category_list.json` contains `groups`, each with `group` and `categories[]` entries containing `category` and a canonical `href`. The extractor uses each href's path directly instead of guessing from display names, and it rejects hrefs from a different host than SITE_BASE_URL. Duplicate hrefs across groups are deduplicated so the same listing isn't crawled twice; group names are retained in `extraction_categories.category_groups`. A bad redirect or empty page 1 is treated as an error.
+`category_list.json` contains `groups`, each with `group` and `categories[]` entries containing `category` and a canonical `href`. The extractor uses each href's path directly instead of guessing from display names, and it rejects hrefs from a different host than SITE_BASE_URL. Duplicate hrefs across groups are deduplicated so the same listing isn't crawled twice; group names are retained in `extraction_categories.category_groups`. Category queue rows no longer present in the current JSON are disabled (not deleted), preventing entries from the previous catalog from being scraped. A bad redirect or empty page 1 is treated as an error.
 
 ## Premium status caveat
 

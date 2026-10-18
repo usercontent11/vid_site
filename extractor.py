@@ -160,6 +160,7 @@ def sync_categories(categories):
       category_name=EXCLUDED.category_name,
       category_path=EXCLUDED.category_path,
       category_groups=EXCLUDED.category_groups,
+      enabled=true,
       max_pages=GREATEST(extraction_categories.max_pages,EXCLUDED.max_pages),
       status=CASE WHEN extraction_categories.status='completed'
         AND extraction_categories.completion_reason='limit'
@@ -176,6 +177,13 @@ def sync_categories(categories):
             (c["category_slug"],c["category_name"],c["category_path"],c["category_groups"],MAX_PAGES)
             for c in categories
         ])
+        active_slugs = [c["category_slug"] for c in categories]
+        conn.execute(
+            """UPDATE extraction_categories
+               SET enabled=false, updated_at=now()
+               WHERE enabled=true AND NOT (category_slug = ANY(%s))""",
+            (active_slugs,),
+        )
         if RETRY_FAILED:
             conn.execute("""UPDATE extraction_categories SET status='pending',attempts=0,consecutive_failures=0,
               last_error=NULL,lease_owner=NULL,lease_expires_at=NULL,completion_reason=NULL,updated_at=now()
@@ -185,7 +193,7 @@ def sync_categories(categories):
 def claim(owner):
     sql = """
     WITH chosen AS (
-      SELECT category_slug FROM extraction_categories WHERE next_page<=max_pages AND
+      SELECT category_slug FROM extraction_categories WHERE enabled=true AND next_page<=max_pages AND
         (status='pending' OR (status='processing' AND (lease_expires_at IS NULL OR lease_expires_at<now())))
       ORDER BY category_slug FOR UPDATE SKIP LOCKED LIMIT 1
     )
@@ -482,7 +490,7 @@ def main():
               count(*) FILTER (WHERE status='failed') failed,
               (SELECT count(*) FROM videos) videos,
               (SELECT count(*) FROM video_categories) category_video_links
-              FROM extraction_categories""").fetchone()
+              FROM extraction_categories WHERE enabled=true""").fetchone()
             print(json.dumps(counts,indent=2,default=str))
     except Exception: crashed+=1; LOG.exception("Could not query final counts.")
     return 1 if crashed or any(x["status"]=="error" for x in results) else 0
