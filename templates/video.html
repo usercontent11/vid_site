@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<meta property="og:type" content="video.other">{% if video.thumbnail_url %}<meta property="og:image" content="{{ video.thumbnail_url }}"><meta name="twitter:image" content="{{ video.thumbnail_url }}">{% endif %}
+{% if video_schema %}<script type="application/ld+json">{{ video_schema|tojson }}</script>{% endif %}
+<script type="application/ld+json">{{ breadcrumb_schema|tojson }}</script>
+{% endblock %}
+{% block content %}
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span>{% if categories and categories[0].href %}<a href="{{ categories[0].href }}">{{ categories[0].category_name }}</a><span>›</span>{% endif %}<span>{{ video.title }}</span></nav>
+<article><header class="watch-header"><p class="eyebrow">WATCH VIDEO</p><h1>{{ video.title }}</h1><div class="watch-meta">{% if video.duration_label %}<span>{{ video.duration_label }}</span>{% endif %}<span>{{ video.views|views }}</span></div></header>
+<div class="watch-layout"><div class="watch-main"><section class="player-frame"><div class="video-player" data-video-player data-video-id="{{ video.id }}" data-stream-endpoint="/api/stream/{{ video.id }}">
+<video controls playsinline preload="none" {% if video.thumbnail_url %}poster="{{ video.thumbnail_url }}"{% endif %} aria-label="{{ video.title }}"></video>
+<div class="player-overlay"><span class="play-symbol" aria-hidden="true">▶</span><button class="button button-primary" type="button" data-load-player>Load video</button><p data-player-status>Press Load video to initialize playback.</p></div></div></section>
+<section class="description-section"><h2>About this video</h2><p class="video-description">{{ description }}</p></section>
+{% if categories %}<section class="description-section"><h2>Categories</h2><div class="category-chips">{% for c in categories %}{% if c.href %}<a class="category-chip" href="{{ c.href }}">{{ c.category_name }}</a>{% endif %}{% endfor %}</div></section>{% endif %}
+</div><aside class="watch-sidebar"><div class="sidebar-card"><h2>Video details</h2>{% if video.duration_label %}<div class="detail-row"><span>Duration</span><strong>{{ video.duration_label }}</strong></div>{% endif %}<div class="detail-row"><span>Views</span><strong>{{ video.views|views }}</strong></div>{% if uploaded %}<div class="detail-row"><span>Uploaded</span><strong>{{ uploaded }}</strong></div>{% endif %}</div><div class="sidebar-card sidebar-note"><p class="eyebrow">DISCOVER MORE</p><p>Related videos prioritize shared categories, with recent videos added when needed.</p></div></aside></div></article>
+{% if related %}<section class="section-block related-block"><div class="section-heading"><div><p class="eyebrow">KEEP EXPLORING</p><h2>Related videos</h2></div></div><div class="video-grid">{% for v in related %}<article class="video-card"><a class="thumbnail-wrap" href="{{ v.href or '#' }}" aria-label="Watch {{ v.title }}">{% if v.thumbnail_url %}<img src="{{ v.thumbnail_url }}" alt="" width="480" height="270" loading="lazy" decoding="async">{% else %}<span class="thumbnail-placeholder">▶</span>{% endif %}{% if v.duration_label %}<span class="duration-badge">{{ v.duration_label }}</span>{% endif %}</a><div class="video-card-body"><h2 class="card-title"><a href="{{ v.href or '#' }}">{{ v.title }}</a></h2><p class="card-meta">{{ v.views|views }}</p></div></article>{% endfor %}</div></section>{% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/player.js" defer></script>{% endblock %}

@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block content %}<section class="page-intro"><p class="eyebrow">BROWSE</p><h1>Video categories</h1><p>Explore the catalogue by category and open a dedicated page for each topic.</p></section>
+<div class="category-directory">{% for c in categories %}{% if c.href %}<a class="directory-item" href="{{ c.href }}"><span class="directory-icon">▦</span><span class="directory-copy"><strong>{{ c.category_name }}</strong><small>{{ c.video_count }} videos</small></span><span class="directory-arrow">→</span></a>{% endif %}{% endfor %}</div>{% endblock %}

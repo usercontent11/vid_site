@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% if title %}{{ title }} | {% endif %}{{ site_name }}</title>
+<meta name="description" content="{{ meta_description|default('Browse videos and explore categories.') }}">
+<meta name="robots" content="{{ robots_meta|default('index,follow') }}">
+<link rel="canonical" href="{{ canonical_url|default(site_base) }}">
+<meta name="theme-color" content="#101115">
+<meta property="og:site_name" content="{{ site_name }}"><meta property="og:title" content="{{ title|default(site_name) }}">
+<meta property="og:description" content="{{ meta_description|default('Browse videos and explore categories.') }}">
+<meta property="og:type" content="website"><meta property="og:url" content="{{ canonical_url|default(site_base) }}">
+<meta name="twitter:card" content="summary_large_image"><link rel="stylesheet" href="/static/style.css">
+{% block extra_head %}{% endblock %}
+<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"WebSite","name":site_name,"url":site_base+"/","potentialAction":{"@type":"SearchAction","target":site_base+"/search?q={search_term_string}","query-input":"required name=search_term_string"}}|tojson }}</script>
+</head><body>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="/"><span class="brand-mark">▶</span><span>{{ site_name }}</span></a>
+<nav class="main-nav" aria-label="Main navigation"><a href="/">Home</a><a href="/categories/">Categories</a></nav>
+<form class="search-form" action="/search" method="get" role="search"><label class="visually-hidden" for="site-search">Search videos</label><input id="site-search" type="search" name="q" placeholder="Search videos…" value="{{ request.args.get('q','') }}" maxlength="120"><button type="submit" aria-label="Search">⌕</button></form>
+</div></header>
+<main class="page-shell">{% block content %}{% endblock %}</main>
+<footer class="site-footer"><div class="footer-inner"><span>© {{ year }} {{ site_name }}</span><span>Browse organized video pages and related content.</span></div></footer>
+{% block scripts %}{% endblock %}</body></html>
