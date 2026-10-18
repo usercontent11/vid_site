@@ -12,6 +12,7 @@ Optional values:
 - `SOURCE_BASE_URL`: source domain, defaults to `https://mobilexh.live`.
 - `ASSET_BASE_URL`: thumbnail CDN, defaults to `https://ic-vt-nss.cdnsolutions.media`.
 - `PER_PAGE`: videos per page, defaults to 30 and is capped at 60.
+- `SOURCE_COOKIE`: when the source page needs the extra preference/state cookie, set this to the raw `g_state` JSON value (starting with `{` and ending with `}`, without a `g_state=` prefix). Vercel does not inherit GitHub Actions secrets, so add it separately in Vercel. Keep the value secret.
 
 ## Features
 
@@ -21,7 +22,7 @@ The Flask/Jinja site includes the home feed, category directory and category pag
 
 When a video page opens, the player automatically calls `/api/stream/<video_id>`. Flask reads the stored `page_path` from Neon, combines it with `SOURCE_BASE_URL`, requests that page, extracts an HTTPS M3U8 manifest, and returns it directly to the browser. The M3U8 URL is not stored in Neon or in a file, and there is no stream cache table. Every page load resolves the stream again.
 
-The resolver requests only the configured source domain and rejects redirects to a different host. The returned manifest must be an HTTPS `.m3u8` URL; the stream hostname can vary per video and does not need to be manually configured. Playback still depends on the media host allowing the browser to fetch its manifest and media segments cross-origin.
+The resolver reuses the source session and its configured cookies. Logs report whether `g_state` is present without exposing cookie values. If the page responds with generic site data instead of video-player data, configure `SOURCE_COOKIE` in Vercel as described above. The resolver requests only the configured source domain and rejects redirects to a different host. The returned manifest must be an HTTPS `.m3u8` URL; the stream hostname can vary per video and does not need to be manually configured. Playback still depends on the media host allowing the browser to fetch its manifest and media segments cross-origin.
 
 This HTTP request is implemented in Flask rather than in a regular PostgreSQL function. Some PostgreSQL HTTP extensions can enqueue asynchronous requests, but that is different from synchronously fetching a page and parsing its HTML to return an M3U8 in one database-function call. Doing it in Flask matches the on-page request/response flow and works with the site's Vercel deployment. The resolver rejects records marked `premium` or `inaccessible` and does not inject login cookies or bypass access controls.
 

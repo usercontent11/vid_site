@@ -5,6 +5,7 @@ on:
     paths:
       - app.py
       - resolver.py
+      - extractor.py
       - templates/**
       - static/**
       - tests/**

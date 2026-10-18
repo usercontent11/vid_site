@@ -258,7 +258,12 @@ def apply_cookie_secret(session, cookie_text=None):
         for name,morsel in parsed.items():
             session.cookies.set(name,morsel.value,domain=urlsplit(SITE_BASE_URL).hostname,path="/")
             count+=1
-    LOG.info("Loaded %d request cookies; cookie values are not logged.",count)
+    has_g_state = any(cookie.name == "g_state" for cookie in session.cookies)
+    LOG.info(
+        "Loaded %d request cookies; g_state=%s; cookie values are not logged.",
+        count,
+        "present" if has_g_state else "absent",
+    )
 
 def http_session():
     sess=getattr(THREAD,"session",None)
