@@ -1,6 +1,14 @@
 name: Probe source page from Neon Function
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - neon.ts
+      - neon-functions/**
+      - package.json
+      - .github/workflows/probe-neon-source-page.yml
   workflow_dispatch:
     inputs:
       page_path:
@@ -55,7 +63,24 @@ jobs:
           esac
 
           npm install --global neon@latest
-          neon deploy --project-id "$NEON_PROJECT_ID" --branch "$NEON_BRANCH_ID" --yes --no-env-pull
+
+          # Create a short-lived, ignored dotenv file so process.env values are
+          # forwarded by the supported neon deploy --env mechanism. JSON quoting
+          # preserves multiline Netscape cookie exports.
+          node <<'NODE'
+          const fs = require("node:fs");
+          const quote = (value) => JSON.stringify(value);
+          const lines = [
+            "SITE_BASE_URL=" + quote(process.env.SITE_BASE_URL || "https://mobilexh.live"),
+            "NEON_INSPECT_TOKEN=" + quote(process.env.NEON_INSPECT_TOKEN),
+          ];
+          if (process.env.SOURCE_COOKIE) {
+            lines.push("SOURCE_COOKIE=" + quote(process.env.SOURCE_COOKIE));
+          }
+          fs.writeFileSync(".env.neon-ci", lines.join("\n") + "\n", { mode: 0o600 });
+          NODE
+          trap 'rm -f .env.neon-ci' EXIT
+          neon deploy --project-id "$NEON_PROJECT_ID" --branch "$NEON_BRANCH_ID" --yes --env .env.neon-ci --no-env-pull
 
           FUNCTION_JSON="$(neon functions get sourcepageinspect --project-id "$NEON_PROJECT_ID" --branch "$NEON_BRANCH_ID" -o json)"
           FUNCTION_URL="$(printf '%s' "$FUNCTION_JSON" | node -e '
