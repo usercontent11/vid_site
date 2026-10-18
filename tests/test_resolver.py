@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from resolver import StreamResolutionError, extract_m3u8_url, source_page_url, _read_source_page
+from resolver import (StreamResolutionError, extract_m3u8_url, extract_download_file_url,\n                      resolve_stream_source, source_page_url, _read_source_page)
 
 
 class ResolverTests(unittest.TestCase):
@@ -120,6 +120,39 @@ class ResolverTests(unittest.TestCase):
         shared_session.assert_called_once_with()
         session.get.assert_called_once()
         self.assertFalse(session.get.call_args.kwargs["allow_redirects"])
+
+
+    def test_extracts_same_site_video_model_download_file(self):
+        page = '''<script id="initials-script">window.initials = {"videoModel":{"downloadFile":"/movies/example/download/144p"}};</script>'''
+        self.assertEqual(
+            extract_download_file_url(page, "https://mobilexh.live/videos/example/"),
+            "https://mobilexh.live/movies/example/download/144p",
+        )
+
+    def test_rejects_third_party_video_model_download_file(self):
+        page = '''<script id="initials-script">window.initials = {"videoModel":{"downloadFile":"https://evil.example/movies/example/download/144p"}};</script>'''
+        self.assertIsNone(
+            extract_download_file_url(page, "https://mobilexh.live/videos/example/")
+        )
+
+    @patch("resolver._read_source_page")
+    def test_stream_source_prefers_hls_over_download_file(self, read_page):
+        page = '''<link rel="preload" as="fetch" crossorigin href="https://media.example-cdn.net/hls/master?sig=abc">
+        <script id="initials-script">window.initials = {"videoModel":{"downloadFile":"/movies/example/download/144p"}};</script>'''
+        read_page.return_value = ("https://mobilexh.live/videos/example/", page)
+        self.assertEqual(
+            resolve_stream_source("/videos/example/", "https://mobilexh.live"),
+            ("https://media.example-cdn.net/hls/master?sig=abc", "hls"),
+        )
+
+    @patch("resolver._read_source_page")
+    def test_stream_source_falls_back_to_same_site_download_file(self, read_page):
+        page = '''<script id="initials-script">window.initials = {"videoModel":{"downloadFile":"/movies/example/download/144p"}};</script>'''
+        read_page.return_value = ("https://mobilexh.live/videos/example/", page)
+        self.assertEqual(
+            resolve_stream_source("/videos/example/", "https://mobilexh.live"),
+            ("https://mobilexh.live/movies/example/download/144p", "file"),
+        )
 
 
 if __name__ == "__main__":

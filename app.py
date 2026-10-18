@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 import psycopg
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 from psycopg.rows import dict_row
-from resolver import StreamResolutionError, inspect_source_page_structure, resolve_stream_url
+from resolver import StreamResolutionError, inspect_source_page_structure, resolve_stream_source
 from extractor import http_session
 
 app = Flask(__name__)
@@ -308,11 +308,11 @@ def stream_api(video_id):
     if not video or video.get("access_status") in {"premium", "inaccessible"}:
         return jsonify({"error": "Video is not available for playback."}), 404
     try:
-        manifest = resolve_stream_url(video["page_path"], SOURCE_BASE_URL)
+        stream_url, stream_type = resolve_stream_source(video["page_path"], SOURCE_BASE_URL)
     except StreamResolutionError as exc:
         log.warning("Stream resolution failed for video id=%s: %s", video_id, exc)
         return jsonify({"error": "A playable stream was not found for this video."}), 503
-    return jsonify({"url": manifest})
+    return jsonify({"url": stream_url, "type": stream_type})
 
 @app.get("/sitemap.xml")
 def sitemap_index():

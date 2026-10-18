@@ -181,6 +181,56 @@ def extract_m3u8_url(page_html: str, page_url: str) -> str:
     )
 
 
+
+def extract_download_file_url(page_html: str, page_url: str) -> str | None:
+    """Read videoModel.downloadFile only as a constrained same-site file fallback."""
+    script_match = re.search(
+        r'<script\\b[^>]*\\bid=["\\']initials-script["\\'][^>]*>(.*?)</script\\s*>',
+        page_html,
+        re.I | re.S,
+    )
+    if not script_match:
+        return None
+    try:
+        raw = re.sub(
+            r"^\\s*window\\.initials\\s*=\\s*",
+            "",
+            script_match.group(1).strip(),
+            count=1,
+        ).strip()
+        if raw.endswith(";"):
+            raw = raw[:-1]
+        initial_data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+
+    model = initial_data.get("videoModel") if isinstance(initial_data, dict) else None
+    download_file = model.get("downloadFile") if isinstance(model, dict) else None
+    if not isinstance(download_file, str) or not download_file.strip():
+        return None
+
+    candidate = validate_public_https_url(_normalize_url_text(download_file), page_url)
+    if not candidate:
+        return None
+    parsed = urlsplit(candidate)
+    page_host = (urlsplit(page_url).hostname or "").lower().rstrip(".")
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+
+    # Do not accept arbitrary hosts or general URLs from page JSON. The only
+    # fallback allowed here is the source site's own movie-download route.
+    if (
+        (parsed.hostname or "").lower().rstrip(".") != page_host
+        or port not in (None, 443)
+        or not parsed.path.lower().startswith("/movies/")
+        or "/download/" not in parsed.path.lower()
+    ):
+        return None
+    return candidate
+
+
 def _read_source_page(url: str, source_host: str) -> tuple[str, str]:
     """Fetch the source page, allowing at most one same-host HTTPS redirect."""
     current = url
@@ -247,6 +297,22 @@ def resolve_stream_url(page_path: str, source_base_url: str) -> str:
     source_host = (urlsplit(source_base_url).hostname or "").lower()
     final_url, page_html = _read_source_page(page_url, source_host)
     return extract_m3u8_url(page_html, final_url)
+
+
+
+def resolve_stream_source(page_path: str, source_base_url: str) -> tuple[str, str]:
+    """Prefer HLS; use the source site's same-host downloadable file as fallback."""
+    page_url = source_page_url(page_path, source_base_url)
+    source_host = (urlsplit(source_base_url).hostname or "").lower()
+    final_url, page_html = _read_source_page(page_url, source_host)
+
+    try:
+        return extract_m3u8_url(page_html, final_url), "hls"
+    except StreamResolutionError as manifest_error:
+        download_url = extract_download_file_url(page_html, final_url)
+        if download_url:
+            return download_url, "file"
+        raise manifest_error
 
 
 def _safe_url_summary(value: str | None, page_url: str) -> dict | None:

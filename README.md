@@ -18,6 +18,10 @@ On success, the workflow saves and commits two files under `diagnostics/`:
 
 This is a sanitized snapshot, not the byte-for-byte raw response. The purpose is to inspect markup and script structure without committing signed URLs, tokens, or cookie values to this public repository. The workflow needs repository contents: write permission to commit the files. Each run overwrites the previous snapshot, so inspect or save a copy before running it for another page.
 
+## Video playback resolution
+
+The stream endpoint first uses a detected HLS manifest. If the page has no usable HLS URL, it may fall back to `videoModel.downloadFile` only when the URL points to the source site's own HTTPS `/movies/.../download/...` route. The API returns a `type` of `hls` or `file`, and the browser uses HLS.js only for HLS manifests. Existing premium/inaccessible database rows remain unavailable for playback, and resolved media URLs are not persisted.
+
 ## Test source-page access from a Neon Function
 
 The **Probe source page from Neon Function** workflow deploys a protected Node.js 24 function to a selected Neon branch, fetches a source video page from Neon’s network, and commits a redacted structure report at `diagnostics/neon-source-page-structure.json`. This probe comes before moving the live resolver: we first compare what Neon receives against the GitHub Actions and Vercel responses.
