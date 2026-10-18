@@ -25,14 +25,14 @@ Every run using the same Neon database shares `extraction_categories`. A `FOR UP
 ## Tables and fields
 
 - `videos`: 16 metadata fields plus seen timestamps.
-- `extraction_categories`: category path, cursor, cap, state, retries, error, and lease.
+- `extraction_categories`: category path and group membership, cursor, cap, state, retries, error, and lease.
 - `video_categories`: membership between videos and categories.
 
 The 16 metadata fields are `id`, `title`, `page_path`, `duration_seconds`, `created_epoch`, `views`, `video_type`, `thumb_id`, `thumbnail_path`, `image_path`, `preview_thumb_path`, `sprite_path`, `trailer_path`, `trailer_fallback_path`, `trailer_cdn_version`, `access_status`. The video ID is the primary key, so repeat sightings update metadata instead of adding duplicate rows.
 
 ## Category path overrides
 
-`category_list.json` contains display names rather than canonical paths. Most names are slugified. For any category with a different actual source path, map its exact display name in `category_paths.json` to a path such as `/categories/canonical-slug`. Values must not include a domain. If a response redirects away from a category page or page 1 has no cards, the category fails rather than being falsely marked complete.
+`category_list.json` contains `groups`, each with `group` and `categories[]` entries containing `category` and a canonical `href`. The extractor uses each href's path directly instead of guessing from display names, and it rejects hrefs from a different host than SITE_BASE_URL. Duplicate hrefs across groups are deduplicated so the same listing isn't crawled twice; group names are retained in `extraction_categories.category_groups`. A bad redirect or empty page 1 is treated as an error.
 
 ## Premium status caveat
 

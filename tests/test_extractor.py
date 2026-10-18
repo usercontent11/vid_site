@@ -1,6 +1,6 @@
 import requests
 import unittest
-from extractor import apply_cookie_secret, detect_access_status, make_page_path, normalize_card, path_only, slugify
+from extractor import apply_cookie_secret, detect_access_status, make_page_path, normalize_card, parse_category_catalog, path_only, slugify
 
 
 class ExtractorTests(unittest.TestCase):
@@ -42,6 +42,26 @@ class ExtractorTests(unittest.TestCase):
         channel = {"tagType": "category", "slug": "amateur", "inurl": "amateur"}
         with self.assertRaisesRegex(SourceFormatError, "Requested category slug"):
             validate_category_context(data, category, "/categories/algerian", channel, [{"id": 1}])
+
+    def test_grouped_category_json_uses_href_and_merges_duplicate_groups(self):
+        payload = {"total_categories": 3, "groups": [
+            {"group":"trending","categories":[
+                {"category":"American","href":"https://mobilexh.live/categories/american"},
+                {"category":"18 Year Old","href":"https://mobilexh.live/categories/18-year-old"}]},
+            {"group":"ethnicity","categories":[
+                {"category":"American","href":"https://mobilexh.live/categories/american"}]}
+        ]}
+        categories = parse_category_catalog(payload)
+        self.assertEqual(len(categories), 2)
+        american = next(item for item in categories if item["category_slug"] == "american")
+        self.assertEqual(american["category_path"], "/categories/american")
+        self.assertEqual(american["category_groups"], ["trending", "ethnicity"])
+
+    def test_grouped_category_json_rejects_other_host(self):
+        payload = {"groups":[{"group":"test","categories":[
+            {"category":"Example","href":"https://example.org/categories/example"}]}]}
+        with self.assertRaisesRegex(RuntimeError, "uses host"):
+            parse_category_catalog(payload)
 
     def test_default_age_cookie(self):
         session = requests.Session()

@@ -3,7 +3,7 @@
 import http.cookies, json, logging, os, re, sys, threading, time, unicodedata, uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from urllib.parse import quote, urljoin, urlsplit
+from urllib.parse import quote, unquote, urljoin, urlsplit
 import psycopg, requests
 from psycopg.rows import dict_row
 from requests.adapters import HTTPAdapter
@@ -66,38 +66,100 @@ def slugify(name):
         elif out and not dash: out.append("-"); dash = True
     return "".join(out).strip("-")
 
+def parse_category_catalog(payload):
+    """Use canonical hrefs from grouped category metadata and merge duplicate paths."""
+    if isinstance(payload, dict) and isinstance(payload.get("groups"), list):
+        grouped_items = []
+        for group_obj in payload["groups"]:
+            if not isinstance(group_obj, dict):
+                raise RuntimeError("Each category group must be an object.")
+            group_name = str(group_obj.get("group") or "uncategorized").strip()
+            items = group_obj.get("categories")
+            if not isinstance(items, list):
+                raise RuntimeError(f"Category group {group_name!r} is missing a categories list.")
+            for item in items:
+                if not isinstance(item, dict):
+                    raise RuntimeError(f"Invalid category in group {group_name!r}: expected an object.")
+                name = str(item.get("category") or "").strip()
+                href = str(item.get("href") or "").strip()
+                if not name or not href:
+                    raise RuntimeError(f"Category item in group {group_name!r} requires category and href.")
+                parsed = urlsplit(href)
+                if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                    raise RuntimeError(f"Category href for {name!r} must be an absolute HTTP(S) URL.")
+                configured_host = (urlsplit(SITE_BASE_URL).hostname or "").lower()
+                href_host = (parsed.hostname or "").lower()
+                if configured_host and href_host != configured_host:
+                    raise RuntimeError(
+                        f"Category href for {name!r} uses host {href_host!r}, "
+                        f"but SITE_BASE_URL is configured for {configured_host!r}."
+                    )
+                path = parsed.path.rstrip("/")
+                if not path.startswith("/categories/") or path == "/categories":
+                    raise RuntimeError(f"Category href for {name!r} has invalid path {path!r}.")
+                grouped_items.append((name, path, group_name))
+    else:
+        names = payload.get("categories") if isinstance(payload, dict) else payload
+        if not isinstance(names, list):
+            raise RuntimeError("category_list.json must contain groups[].categories[] entries.")
+        grouped_items = []
+        for raw in names:
+            name = str(raw).strip()
+            if name:
+                grouped_items.append((name, "/categories/" + slugify(name), "uncategorized"))
+
+    by_path = {}
+    seen_slugs = {}
+    for name, path, group_name in grouped_items:
+        leaf = unquote(path.rstrip("/").rsplit("/", 1)[-1])
+        key = slugify(leaf)
+        if not key:
+            raise RuntimeError(f"Could not create a database key from category path {path!r}.")
+        prior_path = seen_slugs.get(key)
+        if prior_path is not None and prior_path != path:
+            raise RuntimeError(f"Category key collision: {prior_path!r} and {path!r} map to {key!r}.")
+        seen_slugs[key] = path
+        if path not in by_path:
+            by_path[path] = {
+                "category_slug": key,
+                "category_name": name,
+                "category_path": path,
+                "category_groups": [],
+            }
+        elif by_path[path]["category_name"] != name:
+            LOG.warning("Path %s appears with labels %r and %r; preserving the first label.",
+                        path, by_path[path]["category_name"], name)
+        if group_name and group_name not in by_path[path]["category_groups"]:
+            by_path[path]["category_groups"].append(group_name)
+
+    categories = list(by_path.values())
+    if not categories:
+        raise RuntimeError("No categories were found in category_list.json.")
+    return categories
+
+
 def load_categories():
     payload = json.loads((ROOT / "category_list.json").read_text(encoding="utf-8"))
-    names = payload.get("categories") if isinstance(payload, dict) else payload
-    if not isinstance(names, list): raise RuntimeError("category_list.json needs a categories list.")
-    path_file = ROOT / "category_paths.json"
-    overrides = json.loads(path_file.read_text(encoding="utf-8")) if path_file.exists() else {}
-    if not isinstance(overrides, dict): raise RuntimeError("category_paths.json must be an object.")
-    out, seen = [], {}
-    for raw in names:
-        name = str(raw).strip()
-        if not name: continue
-        slug = slugify(name)
-        if not slug: raise RuntimeError(f"No slug for category {name!r}; add a path override.")
-        if slug in seen and seen[slug] != name: raise RuntimeError(f"Slug collision: {seen[slug]!r}, {name!r}")
-        seen[slug] = name
-        override = overrides.get(name)
-        if override:
-            parsed = urlsplit(str(override))
-            if parsed.scheme or parsed.netloc: raise RuntimeError("Category overrides must be paths, not URLs.")
-            path = parsed.path or str(override)
-            if not path.startswith("/"): path = "/" + path if path.startswith("categories/") else "/categories/" + path.strip("/")
-        else: path = "/categories/" + slug
-        out.append({"category_slug":slug,"category_name":name,"category_path":path})
-    if not out: raise RuntimeError("No categories found.")
-    return out
+    categories = parse_category_catalog(payload)
+    if isinstance(payload, dict) and isinstance(payload.get("groups"), list):
+        source_count = sum(len(g.get("categories", [])) for g in payload["groups"] if isinstance(g, dict))
+        declared = payload.get("total_categories")
+        if declared is not None and int(declared) != source_count:
+            LOG.warning("total_categories=%s but found %d grouped entries.", declared, source_count)
+        LOG.info("Loaded %d unique categories from %d grouped entries.", len(categories), source_count)
+    else:
+        LOG.info("Loaded %d categories.", len(categories))
+    return categories
 
 def sync_categories(categories):
     sql = """
-    INSERT INTO extraction_categories(category_slug,category_name,category_path,max_pages,status)
-    VALUES (%s,%s,%s,%s,'pending')
+    INSERT INTO extraction_categories(
+      category_slug,category_name,category_path,category_groups,max_pages,status
+    ) VALUES (%s,%s,%s,%s,%s,'pending')
     ON CONFLICT(category_slug) DO UPDATE SET
-      category_name=EXCLUDED.category_name,category_path=EXCLUDED.category_path,
+      category_name=EXCLUDED.category_name,
+      category_path=EXCLUDED.category_path,
+      category_groups=EXCLUDED.category_groups,
       max_pages=GREATEST(extraction_categories.max_pages,EXCLUDED.max_pages),
       status=CASE WHEN extraction_categories.status='completed'
         AND extraction_categories.completion_reason='limit'
@@ -106,15 +168,19 @@ def sync_categories(categories):
       completion_reason=CASE WHEN extraction_categories.status='completed'
         AND extraction_categories.completion_reason='limit'
         AND GREATEST(extraction_categories.max_pages,EXCLUDED.max_pages)>extraction_categories.last_page
-        THEN NULL ELSE extraction_categories.completion_reason END, updated_at=now()
+        THEN NULL ELSE extraction_categories.completion_reason END,
+      updated_at=now()
     """
     with db() as conn, conn.transaction(), conn.cursor() as cur:
-        cur.executemany(sql, [(c["category_slug"],c["category_name"],c["category_path"],MAX_PAGES) for c in categories])
+        cur.executemany(sql, [
+            (c["category_slug"],c["category_name"],c["category_path"],c["category_groups"],MAX_PAGES)
+            for c in categories
+        ])
         if RETRY_FAILED:
             conn.execute("""UPDATE extraction_categories SET status='pending',attempts=0,consecutive_failures=0,
               last_error=NULL,lease_owner=NULL,lease_expires_at=NULL,completion_reason=NULL,updated_at=now()
               WHERE status='failed'""")
-    LOG.info("Registered %d categories. Configured max page is %d.", len(categories), MAX_PAGES)
+    LOG.info("Registered %d unique categories. Max page cap is %d.", len(categories), MAX_PAGES)
 
 def claim(owner):
     sql = """
@@ -188,77 +254,62 @@ def parse_initials(html):
     if not isinstance(value,dict): raise SourceFormatError("Initial data isn't an object.")
     return value
 
+def validate_category_context(data, category, final_path, channel, cards):
+    """Validate a returned page by its category slug and cards, not tagType alone."""
+    if not isinstance(channel, dict):
+        raise SourceFormatError(
+            f"Expected category metadata for {category['category_slug']!r}; channelInfo is "
+            f"{type(channel).__name__}, currentPage={data.get('currentPage')!r}, "
+            f"final_path={final_path!r}, initial_keys={list(data)[:12]!r}. "
+            "The server may have returned an age-check, anti-bot, or fallback page."
+        )
+    if not isinstance(cards, list):
+        raise SourceFormatError(
+            f"Expected videoThumbProps list for {category['category_slug']!r}; found {type(cards).__name__}; "
+            f"tagType={channel.get('tagType')!r}, slug={channel.get('slug')!r}, "
+            f"inurl={channel.get('inurl')!r}, currentPage={data.get('currentPage')!r}."
+        )
+    expected_slug = slugify(unquote(category["category_path"].rstrip("/").rsplit("/", 1)[-1]))
+    actual_raw = channel.get("slug") or channel.get("inurl")
+    actual_slug = slugify(unquote(str(actual_raw).strip("/").rsplit("/", 1)[-1])) if actual_raw else ""
+    tag_type = str(channel.get("tagType") or "").strip().lower()
+    if actual_slug and actual_slug != expected_slug:
+        raise SourceFormatError(
+            f"Requested category slug={expected_slug!r}, but source page identifies "
+            f"{actual_slug!r}; tagType={tag_type!r}, final_path={final_path!r}, "
+            f"currentPage={data.get('currentPage')!r}. Check the category href in category_list.json."
+        )
+    if tag_type != "category" and actual_slug != expected_slug:
+        raise SourceFormatError(
+            f"Unverified category response for {expected_slug!r}: tagType={tag_type!r}, "
+            f"page_slug={actual_slug!r}, final_path={final_path!r}, currentPage={data.get('currentPage')!r}."
+        )
+    if tag_type != "category":
+        LOG.warning("Accepting %s: matching slug and cards, internal tagType=%r.",
+                    category["category_name"], tag_type)
+
+
 def fetch_page(category,page):
     path=make_page_path(category["category_path"],page)
     response=http_session().get(absolute_url(path),timeout=TIMEOUT)
     if response.status_code in (404,410) and page>1: return None
     response.raise_for_status()
     final=urlsplit(response.url)
-    if final.netloc.lower()!=urlsplit(SITE_BASE_URL).netloc.lower(): raise SourceFormatError("Redirected to another host.")
-    if not final.path.startswith("/categories/"): raise SourceFormatError(f"Unexpected redirect to {final.path!r}.")
+    if final.netloc.lower()!=urlsplit(SITE_BASE_URL).netloc.lower():
+        raise SourceFormatError(f"Request redirected to another host ({final.netloc!r}).")
+    if not final.path.startswith("/categories/"):
+        raise SourceFormatError(f"Requested {path!r}, but response redirected to {final.path!r}.")
     data=parse_initials(response.text)
     channel=data.get("channelInfo")
     cards=((data.get("pagesCategoryComponent") or {}).get("trendingVideoListProps") or {}).get("videoThumbProps")
-    validate_category_context(data, category, final.path, channel, cards)
+    validate_category_context(data,category,final.path,channel,cards)
     reported=data.get("activePage",data.get("page"))
     if reported is not None:
-        try:
-            reported=int(reported)
+        try: reported=int(reported)
         except (TypeError,ValueError) as exc:
-            raise SourceFormatError(f"Invalid page indicator {reported!r} for requested page {page}.") from exc
-        if reported!=page:
-            raise SourceFormatError(f"Requested page {page}, but source rendered page {reported}.")
+            raise SourceFormatError(f"Invalid page indicator {reported!r} for page {page}.") from exc
+        if reported!=page: raise SourceFormatError(f"Requested page {page}; source rendered page {reported}.")
     return cards
-
-def validate_category_context(data, category, final_path, channel, cards):
-    """Validate category identity using both URL and page metadata.
-
-    Some category routes are represented internally as tag listings. Accept that
-    only when the page explicitly identifies the same slug and contains card data.
-    Include diagnostic fields when the server serves a different page/challenge.
-    """
-    if not isinstance(channel,dict):
-        raise SourceFormatError(
-            f"Expected category data for {category['category_slug']!r}, but channelInfo is "
-            f"{type(channel).__name__}; pageType={data.get('currentPage')!r}, "
-            f"final_path={final_path!r}, top_keys={list(data)[:12]!r}. "
-            "The site may have returned an age-verification, anti-bot, or fallback page."
-        )
-    if not isinstance(cards,list):
-        raise SourceFormatError(
-            f"Expected videoThumbProps list for {category['category_slug']!r}; "
-            f"found {type(cards).__name__}. channelInfo keys={list(channel)[:12]!r}, "
-            f"tagType={channel.get('tagType')!r}, slug={channel.get('slug')!r}, "
-            f"inurl={channel.get('inurl')!r}, pageType={data.get('currentPage')!r}."
-        )
-
-    expected_slug = slugify(urlsplit(category["category_path"]).path.rstrip("/").split("/")[-1])
-    page_slug_raw = channel.get("slug") or channel.get("inurl")
-    page_slug = slugify(str(page_slug_raw)) if page_slug_raw else ""
-    tag_type = str(channel.get("tagType") or "").strip().lower()
-
-    if page_slug and page_slug != expected_slug:
-        raise SourceFormatError(
-            f"Requested category slug={expected_slug!r}, but source page identifies "
-            f"slug={page_slug!r} (tagType={tag_type!r}, inurl={channel.get('inurl')!r}, "
-            f"final_path={final_path!r}, pageType={data.get('currentPage')!r}). "
-            "Add the canonical source path to category_paths.json if this category uses a different slug."
-        )
-
-    if tag_type != "category":
-        if page_slug != expected_slug:
-            raise SourceFormatError(
-                f"Not a verified category listing: requested={expected_slug!r}, "
-                f"tagType={tag_type!r}, page_slug={page_slug!r}, "
-                f"final_path={final_path!r}, pageType={data.get('currentPage')!r}."
-            )
-        # The listing is tied to the requested slug and contains the expected card list.
-        # Some categories may have a different internal tagType despite using /categories/.
-        LOG.warning(
-            "Accepting listing for %s with internal tagType=%r because page slug matches and "
-            "videoThumbProps is a list.",
-            category["category_name"], tag_type
-        )
 
 def path_only(value):
     return urlsplit(value.strip()).path or None if isinstance(value,str) and value.strip() else None
