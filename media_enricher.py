@@ -1236,7 +1236,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--refresh-existing", action="store_true", default=False,
                         help="allow validated media paths to replace populated paths; null never overwrites")
     parser.add_argument("--min-request-interval", type=float,
-                        default=float(os.getenv("MEDIA_MIN_REQUEST_INTERVAL", "0.05")),
+                        default=float(os.getenv("MEDIA_MIN_REQUEST_INTERVAL", "0.15")),
                         help="minimum seconds between request starts to the source host")
     args = parser.parse_args(argv)
     if args.apply:
