@@ -237,20 +237,31 @@ def apply_cookie_secret(session, cookie_text=None):
 
     escaped = raw.lstrip().startswith("\\# Netscape")
     count = 0
+    cookie_names = set()
+    parsed_netscape = False
     for original in raw.splitlines():
         line = original.strip()
         if escaped:
             if line.startswith("\\#"): line=line[1:]
             if line.endswith("\\"): line=line[:-1].rstrip()
+        # Netscape exports may contain HttpOnly entries prefixed with #HttpOnly_.
+        if line.startswith("#HttpOnly_"):
+            line = line[len("#HttpOnly_"):]
         if not line or line.startswith("#") or line=="\\": continue
-        f = line.split("\t")
-        if len(f)>=7:
-            domain,_sub,path,secure,expires,name,value=f[:7]
+
+        # Prefer tabs, but also support space-separated copies pasted from tools/chat.
+        fields = line.split("\\t", 6)
+        if len(fields) < 7:
+            fields = re.split(r"\\s+", line, maxsplit=6)
+        if len(fields) >= 7 and fields[1].upper() in {"TRUE", "FALSE"}:
+            domain,_sub,path,secure,expires,name,value=fields[:7]
             try: exp=int(expires)
             except ValueError: exp=0
             if exp and exp<=int(time.time()): continue
             session.cookies.set(name,value,domain=domain,path=path or "/",secure=secure.upper()=="TRUE")
             count+=1
+            cookie_names.add(name)
+            parsed_netscape = True
             continue
         parsed=http.cookies.SimpleCookie()
         try: parsed.load(line[7:].strip() if line.lower().startswith("cookie:") else line)
@@ -258,11 +269,17 @@ def apply_cookie_secret(session, cookie_text=None):
         for name,morsel in parsed.items():
             session.cookies.set(name,morsel.value,domain=urlsplit(SITE_BASE_URL).hostname,path="/")
             count+=1
+            cookie_names.add(name)
     has_g_state = any(cookie.name == "g_state" for cookie in session.cookies)
+    source_type = "Netscape cookie jar" if parsed_netscape else (
+        "provided Cookie header/JSON" if source.strip() else "built-in defaults"
+    )
     LOG.info(
-        "Loaded %d request cookies; g_state=%s; cookie values are not logged.",
+        "Loaded %d request cookies from %s; g_state=%s; names=%s. Cookie values are never logged.",
         count,
+        source_type,
         "present" if has_g_state else "absent",
+        ",".join(sorted(cookie_names)) or "(none)",
     )
 
 def http_session():
