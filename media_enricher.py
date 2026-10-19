@@ -806,7 +806,7 @@ def _selection_where(
         ) + ")"
     where = [missing]
     params: list[Any] = []
-    if not dry_run:
+    if not dry_run and not refresh_existing:
         where.append(
             "(e.video_id IS NULL OR "
             "(e.status = 'retry' AND e.attempts < %s "
@@ -892,7 +892,7 @@ def _tracker_row(
     else:
         status, attempts, retry_minutes = merged_status, 0, None
 
-    last_error = result.error or result.reason_code or None
+    last_error = result.error or None
     return (
         int(row["id"]), status, attempts, retry_minutes, result.http_status,
         result.reason_code, str(last_error)[:900] if last_error else None,
