@@ -501,10 +501,10 @@ def self_test() -> int:
     import requests
     from extractor import apply_cookie_secret
     sample_cookie_jar = (
-        "# Netscape HTTP Cookie File\\n"
-        ".mobilexh.live\\tTRUE\\t/\\tFALSE\\t2000000000\\tcookie_accept_v2\\tencoded%20value\\n"
-        'mobilexh.live FALSE / FALSE 2000000000 g_state {"i_l":0, "i_ll":1}\\n'
-        ".mobilexh.live\\tTRUE\\t/\\tFALSE\\t0\\tx_csrf_token\\t1\\n"
+        "# Netscape HTTP Cookie File\n"
+        ".mobilexh.live\tTRUE\t/\tFALSE\t2000000000\tcookie_accept_v2\tencoded%20value\n"
+        'mobilexh.live FALSE / FALSE 2000000000 g_state {"i_l":0, "i_ll":1}\n'
+        ".mobilexh.live\tTRUE\t/\tFALSE\t0\tx_csrf_token\t1\n"
     )
     cookie_session = requests.Session()
     apply_cookie_secret(cookie_session, sample_cookie_jar)
