@@ -396,8 +396,8 @@ def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, lis
     source_host = (urlsplit(base_url).hostname or "").lower()
     final_url, body = _read_source_page(page_url, source_host)
     lowered = body.lower()
-    title_match = re.search(r"<title\\b[^>]*>(.*?)</title\\s*>", body, re.I | re.S)
-    page_title = html.unescape(re.sub(r"\\s+", " ", title_match.group(1))).strip()[:160] if title_match else "(no title)"
+    title_match = re.search(r"<title\b[^>]*>(.*?)</title\s*>", body, re.I | re.S)
+    page_title = html.unescape(re.sub(r"\s+", " ", title_match.group(1))).strip()[:160] if title_match else "(no title)"
     age_markers = (
         "verify your age", "age verification", "confirm your age",
         "age-check", "age check", "parental-control", "parental control",
@@ -407,7 +407,7 @@ def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, lis
     logging.getLogger("image-debug").info(
         "Source page shape: title=%r; initials_script=%s; videoModel=%s; age_gate_markers=%s",
         page_title,
-        bool(re.search(r'<script\\b[^>]*\\bid=["\\']initials-script["\\']', body, re.I)),
+        bool(re.search(r"<script\b[^>]*\bid\s*=\s*['\"]initials-script['\"]", body, re.I)),
         "present" if "videomodel" in lowered else "absent",
         ",".join(present_markers) or "none",
     )
