@@ -496,6 +496,23 @@ def self_test() -> int:
     assert "Thumbnail / preview" in kinds, kinds
     assert any(loc["section"] == "head" for asset in assets for loc in asset["locations"])
     assert any(loc["section"] == "body" for asset in assets for loc in asset["locations"])
+    # Verify cookie parsing for a real Netscape row, a whitespace-pasted row,
+    # and a JSON-valued g_state cookie. This is all offline and never uses live cookies.
+    import requests
+    from extractor import apply_cookie_secret
+    sample_cookie_jar = (
+        "# Netscape HTTP Cookie File\\n"
+        ".mobilexh.live\\tTRUE\\t/\\tFALSE\\t2000000000\\tcookie_accept_v2\\tencoded%20value\\n"
+        'mobilexh.live FALSE / FALSE 2000000000 g_state {"i_l":0, "i_ll":1}\\n'
+        ".mobilexh.live\\tTRUE\\t/\\tFALSE\\t0\\tx_csrf_token\\t1\\n"
+    )
+    cookie_session = requests.Session()
+    apply_cookie_secret(cookie_session, sample_cookie_jar)
+    cookie_values = {cookie.name: cookie.value for cookie in cookie_session.cookies}
+    assert cookie_values.get("cookie_accept_v2") == "encoded%20value", cookie_values.keys()
+    assert json.loads(cookie_values.get("g_state", "{}")) == {"i_l": 0, "i_ll": 1}, cookie_values.keys()
+    assert cookie_values.get("x_csrf_token") == "1", cookie_values.keys()
+    print("Offline cookie self-test passed: tab rows, whitespace rows, JSON g_state, and session cookies parsed.")
     print(f"Offline self-test passed: {len(assets)} unique image assets; kinds={sorted(kinds)}")
     return 0
 
