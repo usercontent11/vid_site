@@ -52,7 +52,7 @@ jobs:
       MEDIA_BATCH_SIZE: ${{ inputs.batch_size }}
       MEDIA_CONCURRENCY: ${{ inputs.concurrency }}
       MEDIA_MAX_VIDEOS: ${{ inputs.max_videos }}
-      MEDIA_MIN_REQUEST_INTERVAL: "0.05"
+      MEDIA_MIN_REQUEST_INTERVAL: "0.15"
       REQUEST_TIMEOUT_SECONDS: "30"
       DRY_RUN: ${{ inputs.dry_run }}
       REFRESH_EXISTING: ${{ inputs.refresh_existing }}
