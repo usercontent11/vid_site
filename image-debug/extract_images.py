@@ -111,6 +111,7 @@ class AssetExtractor(HTMLParser):
         self.section = "document"
         self.active_text_tag: str | None = None
         self.active_text: list[str] = []
+        self.active_text_attrs: dict[str, str] = {}
         self.picture_depth = 0
         self.found: dict[str, dict] = {}
         self.script_counter = 0
@@ -165,6 +166,37 @@ class AssetExtractor(HTMLParser):
             )
             key_hint = key_match.group(1) if key_match else ""
             self._add(candidate, source, key_hint or source, allow_no_ext=bool(key_hint))
+
+    def _scan_json_fields(self, text_value: str, source: str):
+        """Walk the initial player JSON for image URL fields such as spriteURL and poster."""
+        raw = re.sub(r"^\s*(?:window\.)?initials\s*=\s*", "", text_value.strip(), count=1).strip()
+        if raw.endswith(";"):
+            raw = raw[:-1].strip()
+        if raw.startswith("(") and raw.endswith(")"):
+            raw = raw[1:-1].strip()
+        try:
+            payload = json.loads(raw)
+        except (TypeError, ValueError):
+            return
+
+        field_hint = re.compile(r"(?:sprite|poster|thumb|thumbnail|image|preview|cover|icon|picture|favicon|background)", re.I)
+
+        def walk(node, path: str = ""):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    key_path = f"{path}.{key}" if path else str(key)
+                    if isinstance(value, str) and field_hint.search(key_path):
+                        self._add(value, source + " JSON:" + key_path, key_path, allow_no_ext=True)
+                    if isinstance(value, (dict, list)):
+                        walk(value, key_path)
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    if isinstance(value, str) and field_hint.search(path):
+                        self._add(value, source + f" JSON:{path}[{index}]", path, allow_no_ext=True)
+                    elif isinstance(value, (dict, list)):
+                        walk(value, f"{path}[{index}]")
+
+        walk(payload)
 
     def handle_starttag(self, tag, attrs):
         tag = tag.lower()
@@ -227,6 +259,7 @@ class AssetExtractor(HTMLParser):
         if tag in {"script", "style"}:
             self.active_text_tag = tag
             self.active_text = []
+            self.active_text_attrs = attr
             self.script_counter += 1
 
     def handle_data(self, data):
@@ -240,9 +273,13 @@ class AssetExtractor(HTMLParser):
             if tag == "style":
                 self._css(text_value, "<style> block", "CSS/background")
             else:
-                self._scan_embedded_text(text_value, f"<script> #{self.script_counter}")
+                source = f"<script id={self.active_text_attrs.get('id') or self.script_counter}>"
+                self._scan_embedded_text(text_value, source)
+                if self.active_text_attrs.get("id") == "initials-script" or "videoModel" in text_value[:20000]:
+                    self._scan_json_fields(text_value, source)
             self.active_text_tag = None
             self.active_text = []
+            self.active_text_attrs = {}
         if tag == "picture":
             self.picture_depth = max(0, self.picture_depth - 1)
         if tag in {"head", "body"}:
