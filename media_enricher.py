@@ -964,7 +964,7 @@ def _bulk_write_tracker(conn, tracker_rows: list[tuple[Any, ...]]) -> None:
             reason_code = EXCLUDED.reason_code,
             last_error = EXCLUDED.last_error,
             missing_fields = EXCLUDED.missing_fields,
-            media_hosts = COALESCE(public.video_media_enrichment.media_hosts, '{}'::jsonb) || EXCLUDED.media_hosts,
+            media_hosts = COALESCE(public.video_media_enrichment.media_hosts, '{{}}'::jsonb) || EXCLUDED.media_hosts,
             updated_at = now()
         """,
         params,
