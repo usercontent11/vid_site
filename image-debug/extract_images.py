@@ -109,6 +109,8 @@ class AssetExtractor(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.page_url = page_url
         self.section = "document"
+        self.stylesheets: list[str] = []
+        self.external_css_count = 0
         self.active_text_tag: str | None = None
         self.active_text: list[str] = []
         self.active_text_attrs: dict[str, str] = {}
@@ -116,8 +118,8 @@ class AssetExtractor(HTMLParser):
         self.found: dict[str, dict] = {}
         self.script_counter = 0
 
-    def _add(self, raw_value: str, source: str, context: str, *, allow_no_ext: bool = False):
-        value = normalize_url(raw_value, self.page_url)
+    def _add(self, raw_value: str, source: str, context: str, *, allow_no_ext: bool = False, base_url: str | None = None):
+        value = normalize_url(raw_value, base_url or self.page_url)
         if not value or not image_like(value, context, allow_no_ext):
             return
         rewritten = rewrite_cdn(value)
@@ -145,11 +147,11 @@ class AssetExtractor(HTMLParser):
             if candidate:
                 self._add(candidate, source, context, allow_no_ext=True)
 
-    def _css(self, value: str, source: str, context: str):
+    def _css(self, value: str, source: str, context: str, base_url: str | None = None):
         for match in CSS_URL_RE.finditer(value or ""):
             candidate = match.group(2).strip()
             if candidate:
-                self._add(candidate, source, context + " CSS url()", allow_no_ext=True)
+                self._add(candidate, source, context + " CSS url()", allow_no_ext=True, base_url=base_url)
 
     def _scan_embedded_text(self, value: str, source: str):
         normalized = value.replace(r"\/", "/")
@@ -251,7 +253,12 @@ class AssetExtractor(HTMLParser):
 
         if tag == "link" and attr.get("href"):
             rel = (attr.get("rel") or "").lower()
-            preload_image = "preload" in rel and (attr.get("as") or "").lower() == "image"
+            rel_words = set(rel.split())
+            if "stylesheet" in rel_words:
+                sheet_url = normalize_url(attr["href"], self.page_url)
+                if sheet_url and sheet_url not in self.stylesheets:
+                    self.stylesheets.append(sheet_url)
+            preload_image = "preload" in rel_words and (attr.get("as") or "").lower() == "image"
             image_link = preload_image or any(word in rel for word in ("icon", "image_src", "apple-touch"))
             if image_link:
                 self._add(attr["href"], "link href:" + rel, rel + " " + attr.get("as", ""), allow_no_ext=True)
@@ -294,7 +301,7 @@ class AssetExtractor(HTMLParser):
 
 
 def make_html(page_url: str, final_url: str, status: int, response_bytes: int,
-              assets: list[dict], response_chars: int) -> str:
+              assets: list[dict], response_chars: int, css_files_count: int) -> str:
     counts = Counter(item["kind"] for item in assets)
     sections = Counter()
     for item in assets:
@@ -358,7 +365,7 @@ main{{max-width:1380px;margin:auto;padding:20px 16px 60px}}.stats{{display:flex;
   <h1>Image extraction debug gallery</h1>
   <p class="sub">Target: <a href="{e(page_url)}" target="_blank" rel="noopener noreferrer">{e(page_url)}</a></p>
   <p class="sub">Final page: {e(final_url)} · HTTP {status} · {response_bytes:,} bytes · {response_chars:,} decoded characters</p>
-  <p class="sub">Image CDN rewrite target: <code>https://{CDN_HOST}/</code>. Each thumbnail is clickable.</p>
+  <p class="sub">Image CDN rewrite target: <code>https://{CDN_HOST}/</code>. External stylesheets scanned: {css_files_count}. Each thumbnail is clickable.</p>
 </header>
 <main>
   <h2>Extraction summary</h2>
@@ -378,8 +385,9 @@ main{{max-width:1380px;margin:auto;padding:20px 16px 60px}}.stats{{display:flex;
 """
 
 
-def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, list[dict]]:
+def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, list[dict], int]:
     from resolver import _read_source_page, source_page_url
+    from extractor import http_session
 
     if not page_path.startswith("/videos/") or page_path.startswith("//"):
         raise ValueError("PAGE_PATH must start with /videos/ and must be a path only.")
@@ -389,7 +397,59 @@ def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, lis
     parser = AssetExtractor(final_url)
     parser.feed(body)
     parser.close()
-    return page_url, final_url, 200, len(body.encode("utf-8")), len(body), parser.results()
+
+    # Fetch a bounded number of linked source-site stylesheets to discover CSS
+    # background images and sprite sheets. Never follow redirects for CSS requests.
+    session = http_session()
+    total_css_bytes = 0
+    seen_css_urls = set()
+    for sheet_url in parser.stylesheets[:8]:
+        parsed = urlsplit(sheet_url)
+        host = (parsed.hostname or "").lower()
+        if parsed.scheme != "https" or parsed.username or parsed.password:
+            continue
+        if host != source_host and not host.endswith(".xhcdn.com"):
+            continue
+        if sheet_url in seen_css_urls:
+            continue
+        seen_css_urls.add(sheet_url)
+        if total_css_bytes >= 1_500_000:
+            break
+        try:
+            response = session.get(
+                sheet_url,
+                headers={"Accept": "text/css,*/*;q=0.8"},
+                timeout=(3, 6),
+                allow_redirects=False,
+                stream=True,
+            )
+        except Exception:
+            continue
+        try:
+            if response.status_code != 200:
+                continue
+            body_bytes = bytearray()
+            per_sheet_limit = min(250_000, 1_500_000 - total_css_bytes)
+            for chunk in response.iter_content(16384):
+                if not chunk:
+                    continue
+                remaining = per_sheet_limit - len(body_bytes)
+                if remaining <= 0:
+                    break
+                body_bytes.extend(chunk[:remaining])
+                if len(chunk) > remaining:
+                    break
+            if not body_bytes:
+                continue
+            css_text = bytes(body_bytes).decode(response.encoding or "utf-8", errors="replace")
+            total_css_bytes += len(body_bytes)
+            parser._css(css_text, "external stylesheet " + parsed.path, "external CSS/background", base_url=sheet_url)
+            parser.external_css_count += 1
+        except Exception:
+            continue
+        finally:
+            response.close()
+    return page_url, final_url, 200, len(body.encode("utf-8")), len(body), parser.results(), parser.external_css_count
 
 
 def self_test() -> int:
@@ -434,13 +494,13 @@ def main() -> int:
     page_path = (args.path or os.environ.get("PAGE_PATH") or DEFAULT_PATH).strip()
     base_url = os.environ.get("SITE_BASE_URL", "https://mobilexh.live").strip().rstrip("/")
     try:
-        page_url, final_url, status, size, chars, assets = extract(page_path, base_url)
+        page_url, final_url, status, size, chars, assets, css_files_count = extract(page_path, base_url)
     except Exception as exc:
         print(f"Image extraction failed: {type(exc).__name__}: {str(exc)[:400]}")
         return 1
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(make_html(page_url, final_url, status, size, assets, chars), encoding="utf-8")
+    OUTPUT.write_text(make_html(page_url, final_url, status, size, assets, chars, css_files_count), encoding="utf-8")
     counts = Counter(item["kind"] for item in assets)
     print(json.dumps({
         "target": page_url,
@@ -451,6 +511,7 @@ def main() -> int:
         "source_characters": chars,
         "unique_images": len(assets),
         "image_cdn_rewrite_host": CDN_HOST,
+        "external_css_files_scanned": css_files_count,
         "kinds": dict(counts),
         "html_bytes": OUTPUT.stat().st_size,
         "artifact_upload": False,
