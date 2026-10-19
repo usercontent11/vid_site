@@ -373,7 +373,33 @@ def extract_media_from_html(
 
     model = initials.get("videoModel")
     if not isinstance(model, dict):
-        raise MediaExtractionError("primary_model_missing", "window.initials.videoModel is missing or not an object")
+        snippet = body[:120_000].lower()
+        challenge_markers = (
+            "captcha", "challenge-platform", "checking your browser",
+            "verify your age", "age verification", "must verify your age",
+            "to watch this video, you must", "access denied", "attention required",
+        )
+        matched_markers = [marker for marker in challenge_markers if marker in snippet]
+        key_types = {
+            name: type(initials.get(name)).__name__
+            for name in ("videoModel", "videoEntity", "relatedVideosComponent",
+                         "pagesCategoryComponent", "channelInfo", "videoPlayerComponent")
+            if name in initials
+        }
+        if matched_markers:
+            raise MediaExtractionError(
+                "source_restricted",
+                "Primary videoModel is absent and the response contains likely verification/challenge "
+                f"markers {matched_markers!r}; initials_keys={sorted(map(str, initials.keys()))[:30]!r}. "
+                "The gate was not bypassed.",
+                terminal=True,
+            )
+        raise MediaExtractionError(
+            "primary_model_missing",
+            "window.initials.videoModel is missing or not an object; "
+            f"initials_keys={sorted(map(str, initials.keys()))[:30]!r}; "
+            f"known_key_types={key_types!r}; challenge_markers=none",
+        )
     primary_id = _numeric_id(model.get("id"))
     if primary_id != int(video_id):
         raise MediaExtractionError(
