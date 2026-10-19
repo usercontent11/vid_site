@@ -162,6 +162,37 @@ class MediaEnricherTests(unittest.TestCase):
         self.assertNotIn("wrong", str(result.fields))
         self.assertNotIn("wrongImage", str(result.source_keys))
 
+    def test_missing_primary_model_reports_initial_state_shape(self):
+        import json
+
+        state = {"videoEntity": {"id": VIDEO_ID}, "pagesCategoryComponent": {}}
+        body = (
+            "<html><script id='initials-script'>window.initials="
+            + json.dumps(state)
+            + ";</script></html>"
+        )
+        with self.assertRaises(MediaExtractionError) as caught:
+            extract_media_from_html(body, VIDEO_ID, REQUESTED_URL)
+        self.assertEqual(caught.exception.code, "primary_model_missing")
+        self.assertIn("initials_keys=", str(caught.exception))
+        self.assertIn("videoEntity", str(caught.exception))
+        self.assertIn("known_key_types=", str(caught.exception))
+
+    def test_missing_primary_model_with_verification_marker_is_terminal(self):
+        import json
+
+        body = (
+            "<html><body>Verify your age to continue</body>"
+            "<script id='initials-script'>window.initials="
+            + json.dumps({"videoEntity": {"id": VIDEO_ID}})
+            + ";</script></html>"
+        )
+        with self.assertRaises(MediaExtractionError) as caught:
+            extract_media_from_html(body, VIDEO_ID, REQUESTED_URL)
+        self.assertEqual(caught.exception.code, "source_restricted")
+        self.assertTrue(caught.exception.terminal)
+        self.assertIn("verify your age", str(caught.exception))
+
     def test_primary_model_id_must_match_database_id(self):
         with self.assertRaisesRegex(MediaExtractionError, "does not match requested database id"):
             extract_media_from_html(
