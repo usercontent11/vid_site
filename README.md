@@ -92,3 +92,9 @@ The supplied category-card data does not consistently expose a documented premiu
 ## Schema and reliability
 
 The schema creates the tables automatically and includes idempotent migrations, including `ALTER TABLE videos ADD COLUMN IF NOT EXISTS description TEXT` for existing Neon databases. Schema initialization uses a PostgreSQL advisory lock. Category metadata extraction retries transient HTTP errors (429 and common 5xx); after five category errors the category is marked failed, and `retry_failed=true` can requeue it.
+
+## Image extraction debug gallery
+
+Open Actions → **Debug image extraction** → Run workflow. The default test path is `/videos/1193895`; the workflow extracts image candidates from the HTML head and body, inline CSS, metadata, responsive image attributes, video posters, and embedded player data. It rewrites image CDN hosts such as `ic-vt-nss.xhcdn.com` and `thumb-v*.xhcdn.com` to `https://ic-vt-nss.cdnsolutions.media/`.
+
+The workflow generates `diagnostics/image-extraction-test.html`, a browsable gallery with clickable rewritten asset links and extraction context. It commits this single HTML file directly; it does not upload an Actions artifact. The scan uses the existing source-page request/session code and the optional `SOURCE_COOKIE` secret. It does not fetch external CSS files or render JavaScript, so images loaded only by later browser network requests need a separate browser-based probe.
