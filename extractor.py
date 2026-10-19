@@ -211,7 +211,9 @@ def apply_cookie_secret(session, cookie_text=None):
     are injected into the workflow environment.
     """
     source = SOURCE_COOKIE if cookie_text is None else cookie_text
+    provided_source = bool(source.strip())
     raw = source.strip() or DEFAULT_COOKIE_FILE
+    raw_g_state_json = False
     if "\\n" in raw and "\n" not in raw: raw = raw.replace("\\r\\n","\n").replace("\\n","\n")
 
     # Some exports provide only the g_state cookie's JSON value rather than
@@ -233,6 +235,7 @@ def apply_cookie_secret(session, cookie_text=None):
             raw = DEFAULT_COOKIE_FILE.rstrip() + "\n" + (
                 f"{cookie_domain}\tTRUE\t/\tFALSE\t0\tg_state\t{value}"
             )
+            raw_g_state_json = True
             LOG.info("Loaded raw g_state JSON alongside default preference cookies; cookie values are not logged.")
 
     escaped = raw.lstrip().startswith("\\# Netscape")
@@ -271,9 +274,14 @@ def apply_cookie_secret(session, cookie_text=None):
             count+=1
             cookie_names.add(name)
     has_g_state = any(cookie.name == "g_state" for cookie in session.cookies)
-    source_type = "Netscape cookie jar" if parsed_netscape else (
-        "provided Cookie header/JSON" if source.strip() else "built-in defaults"
-    )
+    if not provided_source:
+        source_type = "built-in defaults"
+    elif raw_g_state_json:
+        source_type = "raw g_state JSON + built-in defaults"
+    elif parsed_netscape:
+        source_type = "Netscape cookie jar"
+    else:
+        source_type = "provided Cookie header"
     LOG.info(
         "Loaded %d request cookies from %s; g_state=%s; names=%s. Cookie values are never logged.",
         count,
