@@ -7,12 +7,15 @@ import html
 import json
 import os
 import re
+import sys
 from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 OUTPUT = ROOT / "diagnostics" / "image-extraction-test.html"
 DEFAULT_PATH = "/videos/1193895"
 CDN_HOST = "ic-vt-nss.cdnsolutions.media"
