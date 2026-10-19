@@ -20,7 +20,7 @@ This is a sanitized snapshot, not the byte-for-byte raw response. The purpose is
 
 ## Video playback resolution
 
-The stream endpoint first uses a detected HLS manifest. If the page has no usable HLS URL, it may fall back to `videoModel.downloadFile` only when the URL points to the source site's own HTTPS `/movies/.../download/...` route. The API returns a `type` of `hls` or `file`, and the browser uses HLS.js only for HLS manifests. Existing premium/inaccessible database rows remain unavailable for playback, and resolved media URLs are not persisted.
+The stream endpoint first asks the deployed Neon `videodebug` Function to find media URLs in the source page HTML. It prefers an HLS manifest, ignores thumbnail-preview MP4s, and falls back to a full video file when needed. The `video-nss.xhcdn.com` media host is rewritten to `video-nss.cdnsolutions.media`. Flask's existing source-page parser remains as a fallback if the Neon Function fails. The API returns a `type` of `hls` or `file`, and the browser uses HLS.js only for HLS manifests. Existing premium/inaccessible database rows remain unavailable for playback, and resolved media URLs are not persisted.
 
 ## Test source-page access from a Neon Function
 

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from resolver import (StreamResolutionError, extract_m3u8_url, extract_download_file_url,
                       resolve_stream_source, source_page_url, _read_source_page)
@@ -170,6 +170,47 @@ class ResolverTests(unittest.TestCase):
         self.assertIn("source_type_keys=['mp4']", message)
         self.assertNotIn("secret.mp4", message)
         self.assertNotIn("token=secret", message)
+
+
+    @patch("resolver.requests.get")
+    def test_neon_extractor_prefers_hls_and_rewrites_video_nss_domain(self, mock_get):
+        response = Mock(status_code=200)
+        response.json.return_value = {
+            "ok": True,
+            "links": [
+                "https://thumb-v5.xhcdn.com/a/preview/526x298.78.t.mp4",
+                "https://video7.xhcdn.com/key=xyz/001/193/895/240p.h264.mp4",
+                "https://video-nss.xhcdn.com/token/media=hls4/001/193/895/_TPL_.h264.mp4.m3u8",
+            ],
+        }
+        mock_get.return_value = response
+        with patch.dict("os.environ", {"NEON_VIDEO_EXTRACTOR_URL": "https://debug.example/"}):
+            result = resolve_stream_source("/videos/example/", "https://mobilexh.live")
+        self.assertEqual(
+            result,
+            ("https://video-nss.cdnsolutions.media/token/media=hls4/001/193/895/_TPL_.h264.mp4.m3u8", "hls"),
+        )
+        self.assertEqual(
+            mock_get.call_args.kwargs["params"]["url"],
+            "https://mobilexh.live/videos/example/",
+        )
+
+    @patch("resolver.requests.get")
+    def test_neon_extractor_uses_full_mp4_not_thumbnail_when_no_hls(self, mock_get):
+        response = Mock(status_code=200)
+        response.json.return_value = {
+            "ok": True,
+            "links": [
+                "https://thumb-v5.xhcdn.com/a/preview/526x298.78.t.mp4",
+                "https://video7.xhcdn.com/key=xyz/001/193/895/240p.h264.mp4",
+            ],
+        }
+        mock_get.return_value = response
+        with patch.dict("os.environ", {"NEON_VIDEO_EXTRACTOR_URL": "https://debug.example/"}):
+            result = resolve_stream_source("/videos/example/", "https://mobilexh.live")
+        self.assertEqual(result, (
+            "https://video7.xhcdn.com/key=xyz/001/193/895/240p.h264.mp4", "file"
+        ))
 
 
 if __name__ == "__main__":

@@ -8,6 +8,14 @@ if (!inspectorToken) {
 
 export default defineConfig({
   functions: {
+    videodebug: {
+      name: "Video URL debugger",
+      source: "./neon-functions/video-debug.ts",
+      env: {
+        SITE_BASE_URL: siteBaseUrl,
+        ...(process.env.SOURCE_COOKIE ? { SOURCE_COOKIE: process.env.SOURCE_COOKIE } : {}),
+      },
+    },
     sourcepageinspect: {
       name: "Source page inspector",
       source: "./neon-functions/source-page-inspect.ts",

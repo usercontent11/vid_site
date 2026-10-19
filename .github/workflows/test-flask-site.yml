@@ -58,6 +58,7 @@ jobs:
       - name: Compile Neon Function and config
         run: |
           npx esbuild neon-functions/source-page-inspect.ts --platform=node --target=node24 --format=esm --outfile=/tmp/source-page-inspect.mjs
+          npx esbuild neon-functions/video-debug.ts --platform=node --target=node24 --format=esm --outfile=/tmp/video-debug.mjs
           npx esbuild neon.ts --bundle --platform=node --target=node24 --format=esm --external:@neon/config/v1 --outfile=/tmp/neon-config.mjs
           node tests/test_neon_inspector.mjs /tmp/source-page-inspect.mjs
       - name: Compile application

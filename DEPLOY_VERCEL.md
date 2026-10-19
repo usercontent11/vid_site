@@ -13,6 +13,7 @@ Optional values:
 - `ASSET_BASE_URL`: thumbnail CDN, defaults to `https://ic-vt-nss.cdnsolutions.media`.
 - `PER_PAGE`: videos per page, defaults to 30 and is capped at 60.
 - `SOURCE_COOKIE`: when the source page needs the extra preference/state cookie, set this to the raw `g_state` JSON value (starting with `{` and ending with `}`, without a `g_state=` prefix). Vercel does not inherit GitHub Actions secrets, so add it separately in Vercel. Keep the value secret.
+- `NEON_VIDEO_EXTRACTOR_URL`: optional; defaults to the deployed `videodebug` Neon Function URL. Set this only if that Function is moved or redeployed under a different URL.
 
 ## Features
 
@@ -20,7 +21,7 @@ The Flask/Jinja site includes the home feed, category directory and category pag
 
 ## How stream resolution works
 
-When a video page opens, the player automatically calls `/api/stream/<video_id>`. Flask reads the stored `page_path` from Neon, combines it with `SOURCE_BASE_URL`, requests that page, extracts an HTTPS M3U8 manifest, and returns it directly to the browser. The M3U8 URL is not stored in Neon or in a file, and there is no stream cache table. Every page load resolves the stream again.
+When a video page opens, the player automatically calls `/api/stream/<video_id>`. Flask reads the stored `page_path` from Neon and asks the configured Neon `videodebug` Function to inspect the source HTML for all exposed media URLs. It prefers an HTTPS M3U8 manifest and falls back to a full video file when no manifest is available; thumbnail-preview clips are ignored. URLs whose host is `video-nss.xhcdn.com` are rewritten to `video-nss.cdnsolutions.media` as requested. If the Neon Function is unavailable or does not return a usable link, Flask falls back to its existing direct source-page parser. Resolved URLs are not persisted or cached.
 
 The resolver reuses the source session and its configured cookies. Logs report whether `g_state` is present without exposing cookie values. If the page responds with generic site data instead of video-player data, configure `SOURCE_COOKIE` in Vercel as described above. The resolver requests only the configured source domain and rejects redirects to a different host. The returned manifest must be an HTTPS `.m3u8` URL; the stream hostname can vary per video and does not need to be manually configured. Playback still depends on the media host allowing the browser to fetch its manifest and media segments cross-origin.
 

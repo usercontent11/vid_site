@@ -2,9 +2,10 @@
 import html
 import ipaddress
 import json
+import os
 import re
 from html.parser import HTMLParser
-from urllib.parse import quote, urljoin, urlsplit
+from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 import requests
 from extractor import http_session
@@ -335,19 +336,113 @@ def resolve_stream_url(page_path: str, source_base_url: str) -> str:
 
 
 
+DEFAULT_NEON_VIDEO_EXTRACTOR_URL = "https://br-super-sound-b5ty7f80-videodebug.compute.c-7.us-east-2.aws.neon.tech/"
+
+
+def _rewrite_video_cdn_host(value: str) -> str:
+    """Map the source's video-nss host to the requested CDN hostname."""
+    parsed = urlsplit(value)
+    if (parsed.hostname or "").lower().rstrip(".") != "video-nss.xhcdn.com":
+        return value
+    netloc = "video-nss.cdnsolutions.media"
+    if parsed.port and parsed.port != 443:
+        netloc += f":{parsed.port}"
+    return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+
+
+def _resolve_from_neon_debug(page_path: str, source_base_url: str) -> tuple[str, str]:
+    """Ask the deployed Neon extractor for all media URLs and choose a playable one."""
+    page_url = source_page_url(page_path, source_base_url)
+    endpoint = os.getenv("NEON_VIDEO_EXTRACTOR_URL", DEFAULT_NEON_VIDEO_EXTRACTOR_URL).strip()
+    try:
+        endpoint_parts = urlsplit(endpoint)
+        if endpoint_parts.scheme != "https" or not endpoint_parts.hostname or endpoint_parts.username or endpoint_parts.password:
+            raise StreamResolutionError("The Neon video extractor endpoint must be a valid HTTPS URL.")
+        response = requests.get(
+            endpoint,
+            params={"url": page_url},
+            headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0 (compatible; VideoCatalogue/1.0)"},
+            timeout=(4, 18),
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except StreamResolutionError:
+        raise
+    except (requests.RequestException, ValueError) as exc:
+        raise StreamResolutionError("The Neon video extractor request failed.") from exc
+
+    if not isinstance(payload, dict) or payload.get("ok") is False:
+        raise StreamResolutionError("The Neon video extractor could not inspect the source page.")
+    raw_links = payload.get("links")
+    if not isinstance(raw_links, list):
+        raise StreamResolutionError("The Neon video extractor returned no media-link list.")
+
+    manifests = []
+    media_files = []
+    for raw in raw_links:
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        candidate = validate_public_https_url(raw, page_url)
+        if not candidate:
+            continue
+        path = urlsplit(candidate).path.lower()
+        if path.endswith(".m3u8"):
+            manifest = validate_manifest(candidate, page_url)
+            if manifest:
+                manifests.append(manifest)
+            continue
+        if not path.endswith((".mp4", ".m4v", ".webm", ".mpd")):
+            continue
+        parsed = urlsplit(candidate)
+        hostname = (parsed.hostname or "").lower()
+        # Preview clips are often .mp4 files too; do not mistake them for the full video.
+        if hostname.startswith("thumb-v") or path.endswith(".t.mp4") or "/526x298" in path:
+            continue
+        media_files.append(candidate)
+
+    # Prefer HLS whenever available. The page may contain many unrelated preview clips.
+    if manifests:
+        preferred = next(
+            (u for u in manifests if (urlsplit(u).hostname or "").lower() == "video-nss.xhcdn.com"),
+            manifests[0],
+        )
+        return _rewrite_video_cdn_host(preferred), "hls"
+
+    if media_files:
+        # Prefer explicit quality files (e.g. /240p.h264.mp4) over template-style URLs.
+        def media_score(value: str) -> tuple[int, int]:
+            path = urlsplit(value).path.lower()
+            quality_match = re.search(r"/\d{3,4}p(?:\.h264)?\.mp4$", path)
+            return (0 if quality_match else 1, len(path))
+
+        media_files.sort(key=media_score)
+        return _rewrite_video_cdn_host(media_files[0]), "file"
+
+    raise StreamResolutionError("The Neon video extractor did not find a usable HLS manifest or video file.")
+
+
 def resolve_stream_source(page_path: str, source_base_url: str) -> tuple[str, str]:
-    """Prefer HLS; use the source site's same-host downloadable file as fallback."""
+    """Prefer URLs from Neon Functions; fall back to the existing page parser."""
+    try:
+        return _resolve_from_neon_debug(page_path, source_base_url)
+    except StreamResolutionError:
+        # Keep the original resolver as a fallback if the Neon function is unavailable
+        # or a page variant contains a source hint the debug scanner missed.
+        pass
+
     page_url = source_page_url(page_path, source_base_url)
     source_host = (urlsplit(source_base_url).hostname or "").lower()
     final_url, page_html = _read_source_page(page_url, source_host)
 
     try:
-        return extract_m3u8_url(page_html, final_url), "hls"
+        stream_url = extract_m3u8_url(page_html, final_url)
+        return _rewrite_video_cdn_host(stream_url), "hls"
     except StreamResolutionError as manifest_error:
         download_url = extract_download_file_url(page_html, final_url)
         if download_url:
-            return download_url, "file"
+            return _rewrite_video_cdn_host(download_url), "file"
         raise manifest_error
+
 
 
 def _safe_url_summary(value: str | None, page_url: str) -> dict | None:
