@@ -126,7 +126,7 @@ class MediaEnricherTests(unittest.TestCase):
         self.assertEqual(result.primary_model_id, VIDEO_ID)
         self.assertEqual(result.status, "complete")
         self.assertEqual(result.fields["thumbnail_path"], "/a/ThumbToken10/s(w:526,h:298),webp/001/193/895/526x298.10.webp")
-        self.assertEqual(result.fields["image_path"], "/a/YWY4Y2RhNzQ4ZTY4ZDYyOGI5MTNlOWJmYTE/s(w:1280,h:720),webp/001/193/895/1280x720.10.jpg")
+        self.assertEqual(result.fields["image_path"], "/a/YWY4Y2RhNzQ4ZTY4ZDYyOGI5MTNlYTJiYjNlOWJmYTE/s(w:1280,h:720),webp/001/193/895/1280x720.10.jpg")
         self.assertEqual(result.fields["preview_thumb_path"], "/a/98FUYah4CwOMwgXm_08fcw/001/193/895/526x298.78.t.mp4")
         self.assertEqual(result.fields["sprite_path"], "/a/1CEYcCbBHCk8lcuqtxcXrw/001/193/895/160x160.50.s.jpg")
         self.assertEqual(result.fields["trailer_path"], "/a/TrailerToken9/001/193/895/526x298.94.3.2.t.av1.mp4")
@@ -145,7 +145,7 @@ class MediaEnricherTests(unittest.TestCase):
             REQUESTED_URL,
             existing_thumb_id=10,
         )
-        self.assertEqual(result.fields["image_path"], "/a/YWY4Y2RhNzQ4ZTY4ZDYyOGI5MTNlOWJmYTE/s(w:1280,h:720),webp/001/193/895/1280x720.10.jpg")
+        self.assertEqual(result.fields["image_path"], "/a/YWY4Y2RhNzQ4ZTY4ZDYyOGI5MTNlYTJiYjNlOWJmYTE/s(w:1280,h:720),webp/001/193/895/1280x720.10.jpg")
         self.assertEqual(result.fields["thumbnail_path"], "/a/ThumbToken10/s(w:526,h:298),webp/001/193/895/526x298.10.webp")
         self.assertEqual(result.source_keys["image_path"], "videoModel.thumbURL (high-resolution variant)")
 
