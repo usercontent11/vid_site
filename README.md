@@ -98,3 +98,37 @@ The schema creates the tables automatically and includes idempotent migrations, 
 Open Actions → **Debug image extraction** → Run workflow. The default test path is `/videos/1193895`; the workflow extracts image candidates from the HTML head and body, inline CSS, metadata, responsive image attributes, video posters, and embedded player data. It rewrites image CDN hosts such as `ic-vt-nss.xhcdn.com` and `thumb-v*.xhcdn.com` to `https://ic-vt-nss.cdnsolutions.media/`.
 
 The workflow generates `diagnostics/image-extraction-test.html`, a browsable gallery with clickable rewritten asset links and extraction context. It commits this single HTML file directly; it does not upload an Actions artifact. For this workflow, add the GitHub Actions repository secret `MOBILEXH_COOKIE_JAR` and paste the complete Netscape HTTP Cookie File into its value (the header/comment lines are fine). This dedicated secret takes priority over the older `SOURCE_COOKIE` secret, so it won't change cookie configuration for other workflows. The parser accepts tab- or whitespace-separated Netscape rows, skips expired cookies, and logs cookie names/count only—never values. Refresh the secret when the source cookies expire. The scan also reports the page title, whether `initials-script` and `videoModel` are present, and age-verification marker matches to help distinguish a restricted/challenge response from an extraction issue. It also scans up to 8 linked CSS stylesheets (up to 1.5 MB total) for background-image and sprite-sheet URLs, with per-file size limits. It does not render JavaScript or inspect later browser network requests, so player assets created only at runtime need a separate browser-based probe.
+
+
+## Missing media enrichment (manual)
+
+This is a separate backfill worker for existing public.videos records. It does not rewrite or run the category scraper, change access_status, or download any media files.
+
+1. Open [Actions → Enrich video media](https://github.com/usercontent11/vid_site/actions/workflows/enrich-video-media.yml).
+2. First run a **single-video diagnostic** with video_id=1193895, max_videos=1, and dry_run=true. Read the output's primary_model_id, source_json_keys, normalized_paths_to_write, cdn_hosts_for_written_paths, and rejected_candidates.
+3. Test a small batch with dry_run=true. Only set dry_run=false when the paths and video-to-media association are correct. Keep refresh_existing=false unless intentionally re-extracting populated fields.
+
+Defaults: batch_size=500, concurrency=20, max_videos=0 (no application-level cap), dry_run=true, and refresh_existing=false. Tune concurrency/request spacing based on the source's responses; these are starting values, not a throughput guarantee. The workflow uses the existing DATABASE_URL secret, SITE_BASE_URL setting, and SOURCE_COOKIE configuration (with MOBILEXH_COOKIE_JAR taking priority when provided). It uses existing project dependencies.
+
+### Association and URL rules
+
+The worker reads window.initials.videoModel and the matching videoEntity as the page's primary object. It checks that the primary model ID matches public.videos.id; a videoThumbProps card is considered only when both its ID and canonical page URL match the primary object. Recommendation cards are never used as general fallbacks. Assets are accepted only from the configured media CDN host families, only when their path contains the expected video directory (1193895 → 001/193/895), and only when the extension fits the destination field. IDs longer than nine digits are rejected until the source's directory grouping is verified. No missing token or filename is fabricated.
+
+Stored fields remain path-only and preserve their asset-specific path, token, filename, case and query string. CDN hostname varies by field, so do not rebuild every path against one guessed thumbnail host.
+
+### Retry state and CDN host mapping
+
+The first run with dry_run=false creates an additive sidecar table, public.video_media_enrichment; it does not alter the public.videos schema. It records result states, bounded retry attempts/backoff, missing fields, and per-field source hostnames. The worker updates the existing public.videos row by ID using batched SQL and never writes null over a populated media value. Valid pages with optional assets missing are checkpointed as partial/no-media instead of being fetched forever. HTTP/network failures are separated from access-restricted/challenge responses. No age-gate or anti-bot bypass is attempted.
+
+The sidecar's media_hosts JSON contains verified hosts for media paths the worker has actually stored or confirmed. Older path values which differ from current source metadata may not have a verified host entry. For frontend reconstruction, join public.video_media_enrichment on video_id and use the matching field's host only when present; do not assume trailer_cdn_version identifies a thumbnail, preview or sprite host.
+
+Useful checks after the first write-enabled run:
+
+    SELECT status, count(*) FROM public.video_media_enrichment GROUP BY status ORDER BY status;
+
+    SELECT video_id, status, attempts, next_retry_at, reason_code, missing_fields, media_hosts
+    FROM public.video_media_enrichment
+    ORDER BY updated_at DESC
+    LIMIT 50;
+
+The media regression tests use synthetic HTML fixtures to verify primary-ID matching, recommendation isolation, path normalization, different per-field CDN hosts, high-resolution image selection, and unverified long-ID rejection. The manual workflow runs compile checks and the complete offline Python test suite before making source requests.
