@@ -250,9 +250,9 @@ def apply_cookie_secret(session, cookie_text=None):
         if not line or line.startswith("#") or line=="\\": continue
 
         # Prefer tabs, but also support space-separated copies pasted from tools/chat.
-        fields = line.split("\\t", 6)
+        fields = line.split("\t", 6)
         if len(fields) < 7:
-            fields = re.split(r"\\s+", line, maxsplit=6)
+            fields = re.split(r"\s+", line, maxsplit=6)
         if len(fields) >= 7 and fields[1].upper() in {"TRUE", "FALSE"}:
             domain,_sub,path,secure,expires,name,value=fields[:7]
             try: exp=int(expires)
