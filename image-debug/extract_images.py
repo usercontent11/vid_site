@@ -519,7 +519,7 @@ def self_test() -> int:
     parser.feed(sample)
     parser.close()
     target_url = "https://ic-vt-nss.xhcdn.com/a/cover/s(w:1280,h:720),webp/009/996/409/v2/2560x1440.210.webp"
-    parser._scan_target_resolution_urls('const posterImage = "' + target_url + '';', "self-test JS")
+    parser._scan_target_resolution_urls('const posterImage = "' + target_url + '";', "self-test JS")
     assets = parser.results()
     urls = {asset["url"] for asset in assets}
     kinds = {asset["kind"] for asset in assets}
