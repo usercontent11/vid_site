@@ -1178,7 +1178,9 @@ def run(args: argparse.Namespace) -> int:
         with db() as conn:
             if not args.dry_run:
                 with conn.transaction():
-                    conn.execute(TRACKER_DDL, prepare=False)
+                    for statement in TRACKER_DDL.split(";"):
+                        if statement.strip():
+                            conn.execute(statement.strip())
             total = count_eligible(
                 conn, dry_run=args.dry_run,
                 refresh_existing=args.refresh_existing, video_id=args.video_id,
