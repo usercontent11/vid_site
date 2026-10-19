@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import logging
 import os
 import re
 import sys
@@ -394,6 +395,22 @@ def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, lis
     page_url = source_page_url(page_path, base_url)
     source_host = (urlsplit(base_url).hostname or "").lower()
     final_url, body = _read_source_page(page_url, source_host)
+    lowered = body.lower()
+    title_match = re.search(r"<title\\b[^>]*>(.*?)</title\\s*>", body, re.I | re.S)
+    page_title = html.unescape(re.sub(r"\\s+", " ", title_match.group(1))).strip()[:160] if title_match else "(no title)"
+    age_markers = (
+        "verify your age", "age verification", "confirm your age",
+        "age-check", "age check", "parental-control", "parental control",
+        "must be 18", "i am 18", "are you 18",
+    )
+    present_markers = [marker for marker in age_markers if marker in lowered]
+    logging.getLogger("image-debug").info(
+        "Source page shape: title=%r; initials_script=%s; videoModel=%s; age_gate_markers=%s",
+        page_title,
+        bool(re.search(r'<script\\b[^>]*\\bid=["\\']initials-script["\\']', body, re.I)),
+        "present" if "videomodel" in lowered else "absent",
+        ",".join(present_markers) or "none",
+    )
     parser = AssetExtractor(final_url)
     parser.feed(body)
     parser.close()
@@ -491,6 +508,10 @@ def main() -> int:
     if args.self_test:
         return self_test()
 
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     page_path = (args.path or os.environ.get("PAGE_PATH") or DEFAULT_PATH).strip()
     base_url = os.environ.get("SITE_BASE_URL", "https://mobilexh.live").strip().rstrip("/")
     try:
