@@ -109,4 +109,4 @@ jobs:
           if [[ -n "$VIDEO_ID" ]]; then
             args+=(--video-id "$VIDEO_ID")
           fi
-          python media_enricher.py "${{args[@]}"
+          python media_enricher.py "${args[@]}"
