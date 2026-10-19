@@ -262,7 +262,7 @@ def trailer_cdn_version(host: str | None) -> int | None:
     """Preserve only the numeric shard in the validated trailer's own hostname."""
     if not host:
         return None
-    match = re.match(r"^thumb-v([0-9]+)\\.", host.lower())
+    match = re.match(r"^thumb-v([0-9]+)\.", host.lower())
     if not match:
         return None
     version = int(match.group(1))
