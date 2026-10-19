@@ -62,9 +62,9 @@ def page_html(
     }
     entity = {
         "id": video_id,
-        "thumbs": {"10": THUMB},
-        "thumbBig": THUMB,
-        "capturedFrames": [{"captureTime": 0, "imgFrameSrc": THUMB}],
+        "thumbs": {"10": THUMB} if primary_media else {},
+        "thumbBig": THUMB if primary_media else None,
+        "capturedFrames": [{"captureTime": 0, "imgFrameSrc": THUMB}] if primary_media else [],
     }
     cards = []
     if include_same_page_card:
