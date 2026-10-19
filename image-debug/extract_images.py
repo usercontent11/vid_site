@@ -32,6 +32,12 @@ VIDEO_RE = re.compile(r"\." + VIDEO_EXT + r"(?:$|[?#])", re.I)
 CSS_URL_RE = re.compile(r"""url\(\s*(['"]?)(.*?)\1\s*\)""", re.I | re.S)
 SRCSET_SPLIT_RE = re.compile(r"""\s*,\s*(?=(?:https?:)?//|/)""")
 
+TARGET_TRANSFORM_RE = re.compile(
+    r"""(?i)(?:\(\s*w\s*:\s*1280\s*,\s*h\s*:\s*720\s*\)|w%3a1280%2ch%3a720)"""
+)
+CANDIDATE_URL_RE = re.compile(r"""(?i)(?:https?:)?//[^\s"'<>\\]+""")
+
+
 
 def normalize_url(value: str, page_url: str) -> str | None:
     value = html.unescape(str(value or "")).strip().strip("\"' ")
@@ -80,12 +86,14 @@ def image_like(value: str, context: str = "", allow_path_without_extension: bool
         return True
     hint = context.lower()
     return allow_path_without_extension and any(
-        word in hint for word in ("sprite", "poster", "og:image", "twitter:image", "thumbnail", "thumburl", "imageurl")
+        word in hint for word in ("sprite", "poster", "og:image", "twitter:image", "thumbnail", "thumburl", "imageurl", "w:1280,h:720")
     )
 
 
 def classify(context: str, value: str) -> str:
     text = (context + " " + urlsplit(value).path).lower()
+    if TARGET_TRANSFORM_RE.search(text):
+        return "1280×720 transform"
     if "sprite" in text:
         return "Sprite sheet"
     if "poster" in text:
@@ -154,7 +162,26 @@ class AssetExtractor(HTMLParser):
             if candidate:
                 self._add(candidate, source, context + " CSS url()", allow_no_ext=True, base_url=base_url)
 
+    def _scan_target_resolution_urls(self, value: str, source: str):
+        """Find any URL carrying the site's 1280x720 image transform."""
+        normalized = html.unescape(str(value or "")).replace(r"\/", "/")
+        normalized = re.sub(r"\\u002f", "/", normalized, flags=re.I)
+        normalized = re.sub(r"\\u0026", "&", normalized, flags=re.I)
+        normalized = re.sub(r"\\u003d", "=", normalized, flags=re.I)
+        normalized = re.sub(r"\\u003f", "?", normalized, flags=re.I)
+        for match in CANDIDATE_URL_RE.finditer(normalized):
+            candidate = match.group(0).rstrip(".,;]}")
+            if not TARGET_TRANSFORM_RE.search(candidate):
+                continue
+            self._add(
+                candidate,
+                source + " [w:1280,h:720 scan]",
+                "w:1280,h:720 target transform",
+                allow_no_ext=True,
+            )
+
     def _scan_embedded_text(self, value: str, source: str):
+        self._scan_target_resolution_urls(value, source)
         normalized = value.replace(r"\/", "/")
         normalized = re.sub(r"\\u002f", "/", normalized, flags=re.I)
         normalized = re.sub(r"\\u0026", "&", normalized, flags=re.I)
@@ -295,15 +322,16 @@ class AssetExtractor(HTMLParser):
 
     def results(self) -> list[dict]:
         records = list(self.found.values())
-        order = {"Video poster": 0, "Thumbnail / preview": 1, "Sprite sheet": 2,
-                 "Social / metadata image": 3, "Preloaded image": 4, "Responsive image": 5,
-                 "CSS / background image": 6, "Icon": 7, "Image": 8}
+        order = {"1280×720 transform": 0, "Video poster": 1, "Thumbnail / preview": 2, "Sprite sheet": 3,
+                 "Social / metadata image": 4, "Preloaded image": 5, "Responsive image": 6,
+                 "CSS / background image": 7, "Icon": 8, "Image": 9}
         return sorted(records, key=lambda item: (order.get(item["kind"], 99), item["url"]))
 
 
 def make_html(page_url: str, final_url: str, status: int, response_bytes: int,
               assets: list[dict], response_chars: int, css_files_count: int) -> str:
     counts = Counter(item["kind"] for item in assets)
+    target_transform_count = sum(1 for item in assets if TARGET_TRANSFORM_RE.search(item["url"]))
     sections = Counter()
     for item in assets:
         for section in {loc["section"] for loc in item["locations"]}:
@@ -375,9 +403,11 @@ main{{max-width:1380px;margin:auto;padding:20px 16px 60px}}.stats{{display:flex;
     <div class="stat"><strong>{sections.get("head", 0)}</strong><span>Found in head</span></div>
     <div class="stat"><strong>{sections.get("body", 0)}</strong><span>Found in body</span></div>
     <div class="stat"><strong>{sections.get("document", 0)}</strong><span>Other / embedded context</span></div>
+    <div class="stat"><strong>{target_transform_count}</strong><span>(w:1280,h:720) matches</span></div>
   </div>
   <div class="stats">{count_cards}</div>
   <p class="sub">Scans image/lazy attributes, srcset, social metadata, preload/icon links, video poster attributes, inline CSS background URLs, style blocks, and image URLs embedded in inline scripts/player JSON. External CSS files and JavaScript-loaded network calls are not fetched.</p>
+  <p class="sub">A dedicated scan searches raw HTML, inline scripts, and fetched stylesheet text for URLs containing (w:1280,h:720). Matching assets are listed first. Browser-only JavaScript network calls are not fetched.</p>
   <h2>Assets</h2>
   <div class="grid">{gallery}</div>
 </main>
@@ -414,6 +444,7 @@ def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, lis
     parser = AssetExtractor(final_url)
     parser.feed(body)
     parser.close()
+    parser._scan_target_resolution_urls(body, "full HTML response")
 
     # Fetch a bounded number of linked source-site stylesheets to discover CSS
     # background images and sprite sheets. Never follow redirects for CSS requests.
@@ -460,6 +491,7 @@ def extract(page_path: str, base_url: str) -> tuple[str, str, int, int, int, lis
                 continue
             css_text = bytes(body_bytes).decode(response.encoding or "utf-8", errors="replace")
             total_css_bytes += len(body_bytes)
+            parser._scan_target_resolution_urls(css_text, "external stylesheet " + parsed.path)
             parser._css(css_text, "external stylesheet " + parsed.path, "external CSS/background", base_url=sheet_url)
             parser.external_css_count += 1
         except Exception:
@@ -486,6 +518,8 @@ def self_test() -> int:
     parser = AssetExtractor(page_url)
     parser.feed(sample)
     parser.close()
+    target_url = "https://ic-vt-nss.xhcdn.com/a/cover/s(w:1280,h:720),webp/009/996/409/v2/2560x1440.210.webp"
+    parser._scan_target_resolution_urls('const posterImage = "' + target_url + '';', "self-test JS")
     assets = parser.results()
     urls = {asset["url"] for asset in assets}
     kinds = {asset["kind"] for asset in assets}
@@ -494,6 +528,10 @@ def self_test() -> int:
     assert "Video poster" in kinds, kinds
     assert "Sprite sheet" in kinds, kinds
     assert "Thumbnail / preview" in kinds, kinds
+    target_assets = [asset for asset in assets if TARGET_TRANSFORM_RE.search(asset["url"])]
+    assert len(target_assets) == 1, [asset["url"] for asset in target_assets]
+    assert target_assets[0]["kind"] == "1280×720 transform", target_assets[0]
+    assert target_assets[0]["url"].startswith("https://" + CDN_HOST + "/a/cover/s(w:1280,h:720)")
     assert any(loc["section"] == "head" for asset in assets for loc in asset["locations"])
     assert any(loc["section"] == "body" for asset in assets for loc in asset["locations"])
     # Verify cookie parsing for a real Netscape row, a whitespace-pasted row,
@@ -548,6 +586,7 @@ def main() -> int:
         "source_bytes": size,
         "source_characters": chars,
         "unique_images": len(assets),
+        "target_1280x720_matches": sum(1 for item in assets if TARGET_TRANSFORM_RE.search(item["url"])),
         "image_cdn_rewrite_host": CDN_HOST,
         "external_css_files_scanned": css_files_count,
         "kinds": dict(counts),
