@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - image-debug/extract_images.py
+      - extractor.py
       - .github/workflows/test-image-extraction.yml
   workflow_dispatch:
     inputs:
@@ -46,7 +47,7 @@ jobs:
       - name: Extract images and generate browsable HTML
         env:
           SITE_BASE_URL: ${{ vars.SITE_BASE_URL || 'https://mobilexh.live' }}
-          SOURCE_COOKIE: ${{ secrets.SOURCE_COOKIE }}
+          SOURCE_COOKIE: ${{ secrets.MOBILEXH_COOKIE_JAR || secrets.SOURCE_COOKIE }}
           PAGE_PATH: ${{ inputs.page_path || '/videos/1193895' }}
         run: python image-debug/extract_images.py --path "$PAGE_PATH"
 
